@@ -3,8 +3,10 @@ package CoinbasePro
 import (
     "log"
     "net/url"
+    "time"
 
     "github.com/gorilla/websocket"
+    "github.com/nu7hatch/gouuid"
 )
 
 /*
@@ -21,6 +23,7 @@ struct message {
 
 type CoinbaseProWSClient struct {
     Connection *websocket.Conn
+    Id         *uuid.UUID
 }
 
 func NewClient(socketUrl string) (*CoinbaseProWSClient, error) {
@@ -34,7 +37,11 @@ func NewClient(socketUrl string) (*CoinbaseProWSClient, error) {
         return nil, err
     }
 
-    client := &CoinbaseProWSClient{ c }
+    id, err := uuid.NewV4()
+    if err != nil {
+        log.Println("Error generating V4 UUID:", err)
+    }
+    client := &CoinbaseProWSClient{ c, id }
     return client, nil
 }
 
@@ -51,14 +58,22 @@ func (c *CoinbaseProWSClient) CloseConnection() error {
     return nil
 }
 
-func (c *CoinbaseProWSClient) StreamMessages() {
+func (c *CoinbaseProWSClient) StreamMessages(received chan<- []byte) {
+    msgReceived := 0
+
     for {
+        time.Sleep(time.Second * 10)
         _, message, err := c.Connection.ReadMessage()
         if err != nil {
             log.Println("CoinbasePro Client read error: ", err)
             return
         }
-        log.Printf("recv: %s", message)
+        received <- message
+
+        //msgReceived++
+        //if (msgReceived % 20 == 0) {
+            log.Printf("recv %d: %s", msgReceived, message)
+        //}
     }
 }
 
