@@ -2,4 +2,9 @@
 # Placeholder
 
 coinbase:
+  channels:
+    - name: level2
+      product_ids: [ ETH-BTC, ETH-USD ]
+    - name: heartbeat
+      product_ids: [ ETH-BTC, ETH-USD ]
 

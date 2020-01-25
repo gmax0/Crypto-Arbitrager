@@ -35,6 +35,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+	log.Print(string(jsonFile))
 
 	err = c.WriteMessage(websocket.TextMessage, jsonFile)
 	if err != nil {
