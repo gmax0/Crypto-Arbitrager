@@ -10,14 +10,58 @@ import (
 )
 
 /*
-struct channel {
+ *
+ * See https://docs.pro.coinbase.com/#websocket-feed for latest specifications
+ *
+ */
+
+//CoinbasePro available channels to subscribe to
+const (
+    HeartbeatChannel = "hearbeat"
+    StatusChannel = "status"
+    TickerChannel = "ticker"
+    Level2Channel = "level2"
+    UserChannel = "user"
+    MatchesChannel = "matches"
+    FullChannel = "full"
+)
+
+//Possible message types sent by the CoinbasePro websocket
+const (
+    HeartbeatType = "heartbeat"
+    StatusType = "status"
+    TickerType = "ticker"
+    SnapshotType = "snapshot"
+    Level2Type = "l2update"
+
+    //Full Channel Exclusive Message Types
+    ReceivedType = "received"
+    OpenType = "open"
+    DoneType = "done"
+    MatchType = "match"
+    ChangeType = "change"
+    ActivateType = "activate"
+)
+
+/*******************************************************************************/
+
+//Subscription Message
+type channel struct {
     name        string   `json:"name"`
     productIds  []string `json:"product_ids"`
 }
 
-struct message {
-    messageType string   `json:"type"`
-    channels    channels `json:"channels"`
+type SubscriptionMessage struct {
+    messageType string    `json:"type"`
+    channels    []channel `json:"channels"`
+}
+
+//Update Messages (e.g. price tickers, heartbeats, etc.)
+/*
+type UpdateMessage struct {
+    type      string `json:"type"`
+    productId string `json:"product_id"`
+
 }
 */
 
@@ -25,6 +69,9 @@ type CoinbaseProWSClient struct {
     Connection *websocket.Conn
     Id         *uuid.UUID
 }
+
+
+/*******************************************************************************/
 
 func NewClient(socketUrl string) (*CoinbaseProWSClient, error) {
     //Use default dialer for now
@@ -63,6 +110,8 @@ func (c *CoinbaseProWSClient) StreamMessages(received chan<- []byte) {
 
     for {
         time.Sleep(time.Second * 10)
+
+        // log.Println("Connection buffer size:", c.Connection.br.Size())
         _, message, err := c.Connection.ReadMessage()
         if err != nil {
             log.Println("CoinbasePro Client read error: ", err)

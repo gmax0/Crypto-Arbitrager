@@ -47,6 +47,7 @@ func main() {
         return
     }
 
+
     // go client.
     go cbp_client.StreamMessages(c1)
 
