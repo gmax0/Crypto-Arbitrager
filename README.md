@@ -8,10 +8,10 @@
 ---
 
 #### Research 
-[ ] Implement buffered channels to store price pair updates (can gorilla/websockets discard websocket messages in the buffer that are X (mille)seconds long? i.e. determine stale message discard mechanism) 
-[ ] Unified/common representation of price data streamed from various exchanges
-[ ] Ability to stream entire playbook and act off those insights (i.e. all sell orders, all buy orders, etc) instead of using only ticker updates
-[X] Scalable arbitrage algorithm
+- [ ] Implement buffered channels to store price pair updates (can gorilla/websockets discard websocket messages in the buffer that are X (mille)seconds long? i.e. determine stale message discard mechanism) 
+- [ ] Unified/common representation of price data streamed from various exchanges
+- [ ] Ability to stream entire playbook and act off those insights (i.e. all sell orders, all buy orders, etc) instead of using only ticker updates
+- [ ] Scalable arbitrage algorithm
 
 #### WebSocket Implementations
 Avoid integrations with fake-volume exchanges.
@@ -23,11 +23,8 @@ Using this [list here](https://nomics.com/exchanges). Preference given for regul
 [ ] Kraken websocket client code [documentation here](https://docs.kraken.com/websockets/#overview)
 
 #### Potential Algorithms for Arbitrage
-- Bellman-Ford
+- Bellman-Ford and negative cycle detection
 
 #### Performance Considerations
 - JSON Parsing benchmark tests, look at alternative libraries
 - Lock-free ring buffers + atomic operations as an alternative to channels
-
-### Arbitraging Approach
----
