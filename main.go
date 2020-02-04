@@ -33,7 +33,7 @@ func main() {
 	fmt.Println(cbp_client)
 
 	//Setup JSON Message
-	jsonFile, err := ioutil.ReadFile("./config/test-subscribe.json")
+    jsonFile, err := ioutil.ReadFile("./testdata/coinbasepro/test-l2-subscribe.json")
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -18,7 +18,7 @@ import (
  *
  */
 
-//CoinbasePro available channels to subscribe to
+// CoinbasePro available channels to subscribe to
 const (
 	HeartbeatChannel = "hearbeat"
 	StatusChannel    = "status"
@@ -29,7 +29,7 @@ const (
 	FullChannel      = "full"
 )
 
-//Possible message types sent by the CoinbasePro websocket
+// Possible message types sent by the CoinbasePro websocket
 const (
 	HeartbeatType = "heartbeat"
 	StatusType    = "status"
@@ -48,37 +48,55 @@ const (
 
 /*******************************************************************************/
 
-//Subscription Message
-type channel struct {
+// Subscription Message
+type Channel struct {
 	Name       string   `json:"name"`
 	ProductIds []string `json:"product_ids"`
 }
 
 type SubscriptionMessage struct {
 	MessageType string    `json:"type"`
-	Channels    []channel `json:"channels"`
+	Channels    []Channel `json:"channels"`
 }
 
-//Update Messages (e.g. price tickers, heartbeats, etc.)
-type UpdateMessage struct {
+/*******************************************************************************/
+
+// L2 Channel Response Messages
+/*
+type L2UpdateMessage struct {
     messageType string `json:"type"`
     productId   string `json:"product_id"`
 
 }
+*/
 
-type SnapshotMessage struct {
+type L2SnapshotMessage struct {
     messageType string    `json:"type"`
     productId   string    `json:"product_id"`
     asks        []string  `json:"asks"`
     bids        []string  `json:"bids"`
 }
 
-type CoinbaseProWSClient struct {
-	Connection *websocket.Conn
-	ID         *uuid.UUID
-}
 
 /*******************************************************************************/
+// Status Channel Response Message
+/*
+type Currency struct {
+
+}
+type StatusResponseMessage struct {
+    MessageType string `json:"type"`
+    Currencies []Currency `json:"currencies"`
+    Products   []Product `json:"products"`
+}
+*/
+
+/*******************************************************************************/
+
+type CoinbaseProWSClient struct {
+    Connection *websocket.Conn
+    ID         *uuid.UUID
+}
 
 //
 func NewClient(socketUrl string) (*CoinbaseProWSClient, error) {

@@ -8,7 +8,7 @@ import (
 
 //Remove dependency on test file later on
 func TestParsePricePairs(t *testing.T) {
-    jsonFile, err := ioutil.ReadFile("../../testdata/coinbase_pro.json")
+    jsonFile, err := ioutil.ReadFile("../../testdata/coinbasepro/test-subscribe.json")
     if err != nil {
         t.Error("Could not read test file.")
     }

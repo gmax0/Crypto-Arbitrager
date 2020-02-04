@@ -6,6 +6,13 @@ type Edge struct {
     Low  float32
 }
 
+// Generalize maker + taker fee structures later on
+// 
+type Fees struct {
+    Maker float32
+    Taker float32
+}
+
 //TODO: Representation of various price points at map[string]map[string]interface{}
 type PriceBook struct {
     Exchange string
