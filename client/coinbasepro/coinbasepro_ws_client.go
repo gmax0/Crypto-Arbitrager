@@ -70,11 +70,21 @@ type L2UpdateMessage struct {
 }
 */
 
+/*
+type Ask struct {
+    Entry []string
+}
+
+type Bid struct {
+    Entry []string
+}
+*/
+
 type L2SnapshotMessage struct {
-    messageType string    `json:"type"`
-    productId   string    `json:"product_id"`
-    asks        []string  `json:"asks"`
-    bids        []string  `json:"bids"`
+    MessageType string    `json:"type"`
+    ProductId   string    `json:"product_id"`
+    Asks        [][]string `json:"asks"`
+    Bids        [][]string `json:"bids"`
 }
 
 
@@ -134,6 +144,17 @@ func (c *CoinbaseProWSClient) CloseConnection() error {
 }
 
 //
+func (c *CoinbaseProWSClient) Subscribe(message []byte) error {
+    err := c.Connection.WriteMessage(websocket.TextMessage, message)
+    if err != nil {
+        log.Println("CoinbasePro Client write error: ", err)
+        return err
+    }
+
+    return nil
+}
+
+//
 func (c *CoinbaseProWSClient) StreamMessages(received chan<- []byte) {
 	msgReceived := 0
 
@@ -151,21 +172,10 @@ func (c *CoinbaseProWSClient) StreamMessages(received chan<- []byte) {
 	}
 }
 
-//
-func (c *CoinbaseProWSClient) Subscribe(message []byte) error {
-	err := c.Connection.WriteMessage(websocket.TextMessage, message)
-	if err != nil {
-		log.Println("CoinbasePro Client write error: ", err)
-		return err
-	}
-
-	return nil
-}
-
 // ParsePricePairs parses the initial subscription message that is sent to Coinbase Pro's websocket.
 // All price pairs that are to be subscribed to will receive an entry in the adjacency matrix (map[map[X]]string) graph. 
 // e.g. ETH-BTC will result in two entries with keys
-func ParsePricePairs(subscriptionMessage SubscriptionMessage) *map[string]map[string]pricebook.Edge {
+func ParsePricePairs(subscriptionMessage SubscriptionMessage) map[string]map[string]pricebook.Edge {
 
 
     //TODO: Add validation for SubscriptionMessage (must have L2). Assuming one channel, L2 channel is contained in the subscriptionMessage
@@ -186,7 +196,7 @@ func ParsePricePairs(subscriptionMessage SubscriptionMessage) *map[string]map[st
         m[split[1]][split[0]] = pricebook.Edge{ High: -2, Low: -2}
     }
 
-    return &m  
+    return m  
 }
 /*
 func (c *CoinbaseProWSClient) Unsubscribe(message []byte) error {
