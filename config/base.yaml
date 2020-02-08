@@ -2,9 +2,9 @@
 # Placeholder
 
 coinbase:
+  data:
+    - price_depth: 3
   channels:
     - name: level2
-      product_ids: [ ETH-BTC, ETH-USD ]
-    - name: heartbeat
       product_ids: [ ETH-BTC, ETH-USD ]
 

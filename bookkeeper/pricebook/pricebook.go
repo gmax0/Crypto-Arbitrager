@@ -20,11 +20,12 @@ type PriceBook struct {
 }
 
 //
-func NewPricebook(exchange string, pricePairs [][]string) {
-
+func NewPricebook(exchange string, emptyPairGraph map[string]map[string]Edge) *PriceBook {
+    p := &PriceBook{ Exchange: exchange, Graph: emptyPairGraph }
+    return p
 }
 
-func initGraph(pricePairs [][]string) {
-
-
+// ProcessPriceDump will process an exchange's initial level-2 order book price dump as a canoniclized message
+func ProcessPriceDump() {
+    
 }
