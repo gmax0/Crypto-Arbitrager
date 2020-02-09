@@ -1,30 +1,12 @@
 package coinbasepro
 
-import (
-    "encoding/json"
+import(
     "testing"
     "io/ioutil"
+    "encoding/json"
 
-    "../../bookkeeper/pricebook"
+    "github.com/buger/jsonparser"
 )
-
-func containsVertices(destMap map[string]pricebook.Edge, keys []string, t *testing.T) {
-    expectedKeySet := make(map[string]bool)
-    for _,s := range keys {
-        expectedKeySet[s] = true
-    }
-    for k,_ := range destMap {
-        delete(expectedKeySet, k)
-    }
-    if len(expectedKeySet) != 0 {
-        var remainingKeys string
-        for k,_ := range expectedKeySet {
-            remainingKeys += k 
-            remainingKeys += " "
-        }
-        t.Errorf("Missing destination vertices: %s", remainingKeys)
-    }
-}
 
 func getMsgFromFile(filepath string) ([]byte, error) {
     jsonFile, err := ioutil.ReadFile(filepath)
@@ -33,41 +15,6 @@ func getMsgFromFile(filepath string) ([]byte, error) {
     }
 
     return jsonFile, nil
-}
-
-//Remove dependency on test file later on
-func TestParsePricePairs(t *testing.T) {
-    jsonFile, err := getMsgFromFile("../../testdata/coinbasepro/test-l2-subscribe.json")
-    if err != nil {
-        t.Error("Could not read test file.")
-    }
-
-    var subscriptionMsg SubscriptionMessage
-
-    err = json.Unmarshal(jsonFile, &subscriptionMsg)
-    if err != nil {
-        t.Error("Unmarshal error.")
-    }
-
-    pairMap := ParsePricePairs(subscriptionMsg)
-    gotLen := len(pairMap)
-    if gotLen != 3 {
-        t.Errorf("len(*pairMap) = %d, want 3", gotLen)
-    }
-
-    for k,v := range pairMap {
-        switch fromCoin := k; fromCoin {
-        case "ETH":
-            expectedKeys := []string{"USD", "BTC"}
-            containsVertices(v, expectedKeys, t)
-        case "BTC":
-            expectedKeys := []string{"ETH"}
-            containsVertices(v, expectedKeys, t)
-        case "USD":
-            expectedKeys := []string{"ETH"}
-            containsVertices(v, expectedKeys, t)
-        }
-    }
 }
 
 func TestParseL2Message(t *testing.T) {
@@ -96,11 +43,9 @@ func TestParseL2Message(t *testing.T) {
     if l2SnapshotMessage.Bids[0][0] != "188.51" && l2SnapshotMessage.Bids[0][1] != "0.26060000" {
         t.Errorf("First Bid Price mismatched. Got %s, %s", l2SnapshotMessage.Bids[0][0], l2SnapshotMessage.Bids[0][1])
     }
-
-
 }
 
-func BenchmarkParseL2Message(b *testing.B) {
+func BenchmarkL2MessageJSON(b *testing.B) {
     jsonFile, err := getMsgFromFile("../../testdata/coinbasepro/test-l2-snapshot-response.json")
     if err != nil {
         b.Error("Could not read test file.")
@@ -114,5 +59,47 @@ func BenchmarkParseL2Message(b *testing.B) {
         if err != nil {
             b.Error("Unmarshal error.")
         }
+        b.Log(l2SnapshotMessage.Asks[0][0], ",", l2SnapshotMessage.Asks[0][1])
+        b.Log(l2SnapshotMessage.Asks[1][0], ",", l2SnapshotMessage.Asks[1][1])
+        b.Log(l2SnapshotMessage.Asks[2][0], ",", l2SnapshotMessage.Asks[2][1])
+        
+        b.Log(l2SnapshotMessage.Bids[0][0], ",", l2SnapshotMessage.Bids[0][1])
+        b.Log(l2SnapshotMessage.Bids[1][0], ",", l2SnapshotMessage.Bids[1][1])
+        b.Log(l2SnapshotMessage.Bids[2][0], ",", l2SnapshotMessage.Bids[2][1])
     }
+}
+
+func BenchmarkL2MessageJSONParser(b *testing.B) {
+    jsonFile, err := getMsgFromFile("../../testdata/coinbasepro/test-l2-snapshot-response.json")
+    if err != nil {
+        b.Error("Could not read test file.")
+    }
+    b.ResetTimer()
+
+    for i := 0; i < b.N; i++ {
+        v1, _:= jsonparser.GetString(jsonFile, "asks", "[0]", "[0]")
+        v2, _:= jsonparser.GetString(jsonFile, "asks", "[0]", "[1]")
+        b.Log(v1, ",", v2)
+
+        v11, _:= jsonparser.GetString(jsonFile, "asks", "[1]", "[0]")
+        v22, _:= jsonparser.GetString(jsonFile, "asks", "[1]", "[1]")
+        b.Log(v11, ",", v22)
+
+        v111, _:= jsonparser.GetString(jsonFile, "asks", "[2]", "[0]")
+        v222, _:= jsonparser.GetString(jsonFile, "asks", "[2]", "[1]")
+        b.Log(v111, ",", v222)
+
+        v3, _ := jsonparser.GetString(jsonFile, "bids", "[0]", "[0]")
+        v4, _ := jsonparser.GetString(jsonFile, "bids", "[0]", "[1]")
+        b.Log(v3, ",", v4)
+
+        v33, _ := jsonparser.GetString(jsonFile, "bids", "[1]", "[0]")
+        v44, _ := jsonparser.GetString(jsonFile, "bids", "[1]", "[1]")
+        b.Log(v33, ",", v44)
+
+        v333, _ := jsonparser.GetString(jsonFile, "bids", "[2]", "[0]")
+        v444, _ := jsonparser.GetString(jsonFile, "bids", "[2]", "[1]")
+        b.Log(v333, ",", v444)
+    }
+
 }
