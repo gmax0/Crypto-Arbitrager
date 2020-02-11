@@ -12,7 +12,7 @@ import (
 
     "github.com/sirupsen/logrus"
 	_ "github.com/spf13/viper"
-    json "github.com/buger/jsonparser"
+    "github.com/buger/jsonparser"
 )
 
 var log = logrus.New()
@@ -34,6 +34,7 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt)
 
 	c1 := make(chan []byte, 1000)
+    // c1 := make(chan []byte)
 
 	//Setup coinbasepro Client Thread
 	cbp_client, err := coinbasepro.NewClient("ws-feed.pro.coinbase.com")
@@ -50,7 +51,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 		return
-	}
+	}    
+    jsonFile2, err := ioutil.ReadFile("./testdata/coinbasepro/test-l2-unsubscribe.json")
+    if err != nil {
+        log.Fatal(err)
+        return
+    }
 
     //
     cbp_pricePairs := []string{"ETH-BTC", "ETH-USD"}
@@ -60,40 +66,59 @@ func main() {
     log.Info(cbp_pb)
 
 
+    /*
 	err = cbp_client.Subscribe(jsonFile)
 	if err != nil {
 		log.Fatal("coinbasepro Client write error:", err)
 		return
 	}
+    */
+    cbp_client.SetSubscribeMessage(jsonFile)
+    cbp_client.SetUnsubscribeMessage(jsonFile2)
 
 	// go client.
-	go cbp_client.StreamMessages(c1)
+	go cbp_client.StartStreaming(c1, interrupt)
 
     maxSizeReached := 0
+    msgReceived := 0
 	for {
 		select {
-		case <-c1:
-			message := <-c1
+		case message := <-c1:
 			chanSize := len(c1)
+            msgReceived++
             if chanSize > maxSizeReached {
                 maxSizeReached = chanSize
             }
 			log.Info("Channel size: ", chanSize)
-            log.Trace(message)
-            msgType, err := json.GetString(message, "type")
+            log.Debug(message)
+
+            msgType, err := jsonparser.GetString(message, "type")
             if err != nil {
                 log.Error("Could not get message type")
             }
             log.Info(msgType)
 
-            
+            if msgType == "snapshot" {
+                err = cbp_pb.ProcessPriceDump(message)
+                if err != nil {
+                    log.Error("Error processing snapshot message for CoinbasePro")
+                }
+            }
 		case <-interrupt:
 			log.Println("interrupt")
+            err = cbp_client.StopStreaming()
+            if err != nil {
+                log.Error("StopStreaming() error: ", err)
+            }
+
 			err = cbp_client.CloseConnection()
 			if err != nil {
 				log.Error("coinbasepro Client write close error:", err)
 			}
+
             log.Info("Max Chan Size Reached: " , maxSizeReached)
+            log.Info("Messages Received: ", msgReceived)
+            log.Info(cbp_pb)
 			return
 		}
 	}

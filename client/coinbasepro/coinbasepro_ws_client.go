@@ -2,6 +2,7 @@ package coinbasepro
 
 import (
 	"net/url"
+    "os"
 	_ "time"
 
 	"github.com/gorilla/websocket"
@@ -10,9 +11,17 @@ import (
 )
 
 var log = logrus.New()
+var f os.File
 
 func init() {
+    // open a file
+    f, err := os.OpenFile("test.log", os.O_APPEND | os.O_CREATE | os.O_RDWR, 0666)
+    if err != nil {
+        log.Printf("error opening file: %v", err)
+    }
 
+    log.SetOutput(f)
+    log.SetLevel(logrus.DebugLevel)
 }
 
 /*
@@ -73,16 +82,6 @@ type L2UpdateMessage struct {
 }
 */
 
-/*
-type Ask struct {
-    Entry []string
-}
-
-type Bid struct {
-    Entry []string
-}
-*/
-
 type L2SnapshotMessage struct {
     MessageType string    `json:"type"`
     ProductId   string    `json:"product_id"`
@@ -107,8 +106,10 @@ type StatusResponseMessage struct {
 /*******************************************************************************/
 
 type CoinbaseProWSClient struct {
-    Connection *websocket.Conn
+    connection *websocket.Conn
     ID         *uuid.UUID
+    subMsg     []byte 
+    unsubMsg   []byte
 }
 
 //
@@ -127,57 +128,76 @@ func NewClient(socketUrl string) (*CoinbaseProWSClient, error) {
 	if err != nil {
 		log.Error("Error generating V4 UUID:", err)
 	}
-	client := &CoinbaseProWSClient{c, id}
+
+
+	client := &CoinbaseProWSClient{c, id, nil, nil}
 	return client, nil
 }
 
 //
 func (c *CoinbaseProWSClient) CloseUnderlyingConnection() {
-	c.Connection.Close()
+	c.connection.Close()
 }
 
 //
 func (c *CoinbaseProWSClient) CloseConnection() error {
-	err := c.Connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	err := c.connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	if err != nil {
 		log.Error("CoinbasePro Client write close error: ", err)
+        log.Info("Forcing connection close")
 		return err
 	}
 	return nil
 }
 
 //
-func (c *CoinbaseProWSClient) Subscribe(message []byte) error {
-    err := c.Connection.WriteMessage(websocket.TextMessage, message)
+func (c *CoinbaseProWSClient) SetSubscribeMessage(message []byte) {
+    c.subMsg = message
+    return
+}
+
+func (c *CoinbaseProWSClient) SetUnsubscribeMessage(message []byte) {
+    c.unsubMsg = message
+    return
+}
+
+//
+func (c *CoinbaseProWSClient) StartStreaming(received chan<- []byte, interrupt <-chan os.Signal) error {
+    err := c.connection.WriteMessage(websocket.TextMessage, c.subMsg)
     if err != nil {
         log.Error("CoinbasePro Client write error: ", err)
         return err
     }
 
-    return nil
-}
-
-//
-func (c *CoinbaseProWSClient) StreamMessages(received chan<- []byte) {
 	msgReceived := 0
 
 	for {
-		_, message, err := c.Connection.ReadMessage() // See https://github.com/gorilla/websocket/blob/master/conn.go#L980 on advancement of frames
-                                                      // We can only achieve this by calling Conn.NextReader() to skip messages 
-		if err != nil {
-			log.Error("CoinbasePro Client read error: ", err)
-			return
-		}
-        msgReceived++
-		received <- message
+        select {
+        default:
+            _, message, err := c.connection.ReadMessage() // See https://github.com/gorilla/websocket/blob/master/conn.go#L980 on advancement of frames
+                                                          // We can only achieve this by calling Conn.NextReader() to skip messages 
+            if err != nil {
+                log.Error("CoinbasePro Client read error: ", err)
+                defer f.Close()
+                return err
+            }
+            msgReceived++
+            received <- message
 
-		log.Trace("recv ", msgReceived, ": ", string(message))
+            log.Debug("recv ", msgReceived, ": ", string(message))
+        case <- interrupt:
+            log.Info("Received interrupt signal, stopped reading from WS client")
+            defer f.Close()
+            return nil
+        }
 	}
 }
 
-
-/*
-func (c *CoinbaseProWSClient) Unsubscribe(message []byte) error {
-
+func (c *CoinbaseProWSClient) StopStreaming() error {
+    err := c.connection.WriteMessage(websocket.TextMessage, c.unsubMsg)
+    if err != nil {
+        log.Error("CoinbasePro Client write error: ", err)
+        return err
+    }
+    return nil
 }
-*/
