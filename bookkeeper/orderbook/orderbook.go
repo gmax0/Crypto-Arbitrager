@@ -1,9 +1,8 @@
 package orderbook
 
 import (
-	"fmt"
-	"strconv"
 	"container/heap"
+	"strconv"
 
 	"../../common/constants"
 	"github.com/buger/jsonparser"
@@ -11,6 +10,7 @@ import (
 
 /*******************************************************************************/
 
+//Price levels in BidHeap shall be in descending order
 type BidHeap []*PriceLevel
 
 func (bidH BidHeap) Len() int { return len(bidH) }
@@ -42,8 +42,13 @@ func (bidH *BidHeap) Pop() interface{} {
 	return pricelevel
 }
 
+func (bidH *BidHeap) Top() *PriceLevel {
+	return (*bidH)[0]
+}
+
 /*******************************************************************************/
 
+//Price levels in AskHeap shall be in ascending order
 type AskHeap []*PriceLevel
 
 func (askH AskHeap) Len() int { return len(askH) }
@@ -75,6 +80,10 @@ func (askH *AskHeap) Pop() interface{} {
 	return pricelevel
 }
 
+func (askH *AskHeap) Top() *PriceLevel {
+	return (*askH)[0]
+}
+
 /*******************************************************************************/
 
 type PriceVol struct {
@@ -84,14 +93,33 @@ type PriceVol struct {
 type OrderBook struct {
 	Exchange  int
 	PricePair string
-	Bids BidHeap
-	Ask  AskHeap
+	Bids      *BidHeap
+	Asks      *AskHeap
 }
 
 type PriceLevel struct {
-	Price float64
+	Price  float64
 	Volume float64
-	Index int
+	Index  int
+}
+
+/*******************************************************************************/
+
+//Testing Helpers
+func popAskHeap(ah *AskHeap) PriceLevel {
+	return *(heap.Pop(ah).(*PriceLevel))
+}
+
+func popBidHeap(bh *BidHeap) PriceLevel {
+	return *(heap.Pop(bh).(*PriceLevel))
+}
+
+func (ob *OrderBook) getLowestAsk() PriceLevel {
+	return *(*(ob.Asks))[0]
+}
+
+func (ob *OrderBook) getHighestBid() PriceLevel {
+	return *(*(ob.Bids))[0]
 }
 
 /*******************************************************************************/
@@ -99,93 +127,42 @@ type PriceLevel struct {
 func NewOrderBook(exchange int, pricepair string, msg []byte) (*OrderBook, error) {
 
 	if exchange == constants.CoinbasePro {
-		var buyPriceLevels BidHeap
-		var askPriceLevels AskHeap
+		var bh BidHeap
+		var ah AskHeap
 
 		//Initialize bid heap
 		i := 0
 		jsonparser.ArrayEach(msg, func(value []byte, datatype jsonparser.ValueType, offset int, err error) {
-			bidPrice, err  := jsonparser.GetString(value, "[0]")
-			bidVol, err    := jsonparser.GetString(value, "[1]")
+			bidPrice, err := jsonparser.GetString(value, "[0]")
+			bidVol, err := jsonparser.GetString(value, "[1]")
 			bidPriceF, err := strconv.ParseFloat(bidPrice, 64)
-			bidVolF, err   := strconv.ParseFloat(bidVol, 64)
+			bidVolF, err := strconv.ParseFloat(bidVol, 64)
 
 			pricelevel := &PriceLevel{Price: bidPriceF, Volume: bidVolF, Index: i}
 			i++
-			buyPriceLevels = append(buyPriceLevels, pricelevel)
+			bh = append(bh, pricelevel)
 		}, "bids")
 
-		heap.Init(&buyPriceLevels)
-		for _, level := range buyPriceLevels {
-			fmt.Println(level)
-		}
-		fmt.Println(len(buyPriceLevels))
-
-		for buyPriceLevels.Len() > 0 {
-			pricelevel := heap.Pop(&buyPriceLevels).(*PriceLevel)
-			fmt.Println(pricelevel)
-		}
+		heap.Init(&bh)
 
 		//Initialize ask heap
 		i = 0
 		jsonparser.ArrayEach(msg, func(value []byte, datatype jsonparser.ValueType, offset int, err error) {
-			askPrice, err  := jsonparser.GetString(value, "[0]")
-			askVol, err    := jsonparser.GetString(value, "[1]")
+			askPrice, err := jsonparser.GetString(value, "[0]")
+			askVol, err := jsonparser.GetString(value, "[1]")
 			askPriceF, err := strconv.ParseFloat(askPrice, 64)
-			askVolF, err   := strconv.ParseFloat(askVol, 64)
+			askVolF, err := strconv.ParseFloat(askVol, 64)
 
 			pricelevel := &PriceLevel{Price: askPriceF, Volume: askVolF, Index: i}
 			i++
-			askPriceLevels = append(askPriceLevels, pricelevel)
+			ah = append(ah, pricelevel)
 		}, "asks")
 
-		heap.Init(&askPriceLevels)
-		for _, level := range askPriceLevels {
-			fmt.Println(level)
-		}
-		fmt.Println(len(askPriceLevels))
+		heap.Init(&ah)
 
-		for askPriceLevels.Len() > 0 {
-			pricelevel := heap.Pop(&askPriceLevels).(*PriceLevel)
-			fmt.Println(pricelevel)
-		}
-
+		ob := &OrderBook{Exchange: constants.CoinbasePro, PricePair: pricepair, Bids: &bh, Asks: &ah}
+		return ob, nil
 	}
-
 
 	return nil, nil
 }
-
-/*
-func NewOrderBook(exchange int, pricepair string, msg []byte) (*OrderBook, error) {
-	ob := &OrderBook{Exchange: exchange, PricePair: pricepair}
-	ob.Bids = make([]PriceVol, PriceDepth) 
-	ob.Asks = make([]PriceVol, PriceDepth)
-
-	if exchange == constants.CoinbasePro {
-		for i := 0; i < PriceDepth; i++ {
-			bidPrice, err := jsonparser.GetString(msg, "bids", fmt.Sprintf("[%d]", i), "[0]")
-			bidVol, err := jsonparser.GetString(msg, "bids", fmt.Sprintf("[%d]", i), "[1]")
-			askPrice, err := jsonparser.GetString(msg, "asks", fmt.Sprintf("[%d]", i), "[0]")
-			askVol, err := jsonparser.GetString(msg, "asks", fmt.Sprintf("[%d]", i), "[1]")
-
-			bidPriceF, err := strconv.ParseFloat(bidPrice, 64)
-			bidVolF, err := strconv.ParseFloat(bidVol, 64)
-			askPriceF, err := strconv.ParseFloat(askPrice, 64)
-			askVolF, err := strconv.ParseFloat(askVol, 64)
-			
-			if err != nil {
-				return nil, err
-			}
-
-			ob.Bids[i].Price = bidPriceF
-			ob.Bids[i].Volume = bidVolF
-
-			ob.Asks[i].Price = askPriceF
-			ob.Asks[i].Volume = askVolF
-		}
-	}
-
-	return ob, nil
-}
-*/
