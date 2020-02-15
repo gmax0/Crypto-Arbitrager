@@ -4,6 +4,13 @@
 2. Eventual integration of trade executions in response to discovered arbitrage opportunities
 3. Arbitrage discovery should encompass multiple exchanges + N maximum currency hops ("N-angular" arbitrage), all configurable by user
 
+### OrderBook Representation
+---
+Benchmark Test These
+- Treap
+- RB Tree
+- Heap
+
 ### To-Do's:
 ---
 

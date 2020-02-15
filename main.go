@@ -6,23 +6,25 @@ import (
 	"os"
 	"os/signal"
 
+	"./bookkeeper"
+	pricebook "./bookkeeper/pricebook"
 	coinbasepro "./client/coinbasepro"
-    pricebook "./bookkeeper/pricebook"
+	"./common/constants"
 	_ "./config"
 
-    "github.com/sirupsen/logrus"
+	"github.com/buger/jsonparser"
+	"github.com/sirupsen/logrus"
 	_ "github.com/spf13/viper"
-    "github.com/buger/jsonparser"
 )
 
 var log = logrus.New()
 
 func init() {
-    log.SetFormatter(&logrus.TextFormatter{
-        DisableColors: true,
-        FullTimestamp: true,
-    })
-    //Read configs in here
+	log.SetFormatter(&logrus.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
+	//Read configs in here
 }
 
 func worker() {
@@ -34,91 +36,103 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt)
 
 	c1 := make(chan []byte, 1000)
-    // c1 := make(chan []byte)
+	// c1 := make(chan []byte)
+
+	//Setup Bookkeeper
+	_ = make(chan []byte)
+	bk := bookkeeper.NewBookkeeper()
 
 	//Setup coinbasepro Client Thread
-	cbp_client, err := coinbasepro.NewClient("ws-feed.pro.coinbase.com")
+	cbpClient, err := coinbasepro.NewClient("ws-feed.pro.coinbase.com")
 	if err != nil {
 		log.Fatal("Unable to initialize coinbasepro Client:", err)
 		return
 	}
-	defer cbp_client.CloseUnderlyingConnection()
+	defer cbpClient.CloseUnderlyingConnection()
 
-	fmt.Println(cbp_client)
+	fmt.Println(cbpClient)
 
 	//Setup JSON Message
-    jsonFile, err := ioutil.ReadFile("./testdata/coinbasepro/test-l2-subscribe.json")
+	jsonFile, err := ioutil.ReadFile("./testhelpers/testdata/coinbasepro/test-l2-subscribe.json")
 	if err != nil {
 		log.Fatal(err)
 		return
-	}    
-    jsonFile2, err := ioutil.ReadFile("./testdata/coinbasepro/test-l2-unsubscribe.json")
-    if err != nil {
-        log.Fatal(err)
-        return
-    }
-
-    //
-    cbp_pricePairs := []string{"ETH-BTC", "ETH-USD"}
-
-    //Initialize CoinbasePro Pricebook
-    cbp_pb := pricebook.NewPricebook(pricebook.CoinbasePro, cbp_pricePairs)
-    log.Info(cbp_pb)
-
-
-    /*
-	err = cbp_client.Subscribe(jsonFile)
+	}
+	jsonFile2, err := ioutil.ReadFile("./testhelpers/testdata/coinbasepro/test-l2-unsubscribe.json")
 	if err != nil {
-		log.Fatal("coinbasepro Client write error:", err)
+		log.Fatal(err)
 		return
 	}
-    */
-    cbp_client.SetSubscribeMessage(jsonFile)
-    cbp_client.SetUnsubscribeMessage(jsonFile2)
+
+	//
+	cbpPricePairs := []string{"ETH-BTC", "ETH-USD"}
+
+	//Initialize CoinbasePro Pricebook
+	cbpPb := pricebook.NewPricebook(pricebook.CoinbasePro, cbpPricePairs)
+	log.Info(cbpPb)
+
+	/*
+		err = cbpClient.Subscribe(jsonFile)
+		if err != nil {
+			log.Fatal("coinbasepro Client write error:", err)
+			return
+		}
+	*/
+	cbpClient.SetSubscribeMessage(jsonFile)
+	cbpClient.SetUnsubscribeMessage(jsonFile2)
 
 	// go client.
-	go cbp_client.StartStreaming(c1, interrupt)
+	go cbpClient.StartStreaming(c1, interrupt)
 
-    maxSizeReached := 0
-    msgReceived := 0
+	maxSizeReached := 0
+	msgReceived := 0
 	for {
 		select {
 		case message := <-c1:
 			chanSize := len(c1)
-            msgReceived++
-            if chanSize > maxSizeReached {
-                maxSizeReached = chanSize
-            }
+			msgReceived++
+			if chanSize > maxSizeReached {
+				maxSizeReached = chanSize
+			}
 			log.Info("Channel size: ", chanSize)
-            log.Debug(message)
+			log.Debug(message)
 
-            msgType, err := jsonparser.GetString(message, "type")
-            if err != nil {
-                log.Error("Could not get message type")
-            }
-            log.Info(msgType)
+			msgType, err := jsonparser.GetString(message, "type")
+			if err != nil {
+				log.Error(err)
+				return
+			}
 
-            if msgType == "snapshot" {
-                err = cbp_pb.ProcessPriceDump(message)
-                if err != nil {
-                    log.Error("Error processing snapshot message for CoinbasePro")
-                }
-            }
+			if msgType == "snapshot" {
+				pricePair, err := jsonparser.GetString(message, "product_id")
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
+				err = bk.InitBook(constants.CoinbasePro, pricePair, message)
+				if err != nil {
+					log.Error(err)
+				}
+			} else if msgType == "l2update" {
+			}
 		case <-interrupt:
 			log.Println("interrupt")
-            err = cbp_client.StopStreaming()
-            if err != nil {
-                log.Error("StopStreaming() error: ", err)
-            }
+			err = cbpClient.StopStreaming()
+			if err != nil {
+				log.Error("StopStreaming() error: ", err)
+			}
 
-			err = cbp_client.CloseConnection()
+			err = cbpClient.CloseConnection()
 			if err != nil {
 				log.Error("coinbasepro Client write close error:", err)
 			}
 
-            log.Info("Max Chan Size Reached: " , maxSizeReached)
-            log.Info("Messages Received: ", msgReceived)
-            log.Info(cbp_pb)
+			log.Info("Max Chan Size Reached: ", maxSizeReached)
+			log.Info("Messages Received: ", msgReceived)
+			log.Info(cbpPb)
+
+			log.Info(bk.GetBooks())
 			return
 		}
 	}

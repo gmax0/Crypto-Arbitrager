@@ -11,7 +11,7 @@ import (
 /*******************************************************************************/
 
 //Price levels in BidHeap shall be in descending order
-type BidHeap []*PriceLevel
+type BidHeap []*priceLevel
 
 func (bidH BidHeap) Len() int { return len(bidH) }
 
@@ -27,7 +27,7 @@ func (bidH BidHeap) Swap(i, j int) {
 
 func (bidH *BidHeap) Push(x interface{}) {
 	n := len(*bidH)
-	pricelevel := x.(*PriceLevel)
+	pricelevel := x.(*priceLevel)
 	pricelevel.Index = n
 	*bidH = append(*bidH, pricelevel)
 }
@@ -42,14 +42,14 @@ func (bidH *BidHeap) Pop() interface{} {
 	return pricelevel
 }
 
-func (bidH *BidHeap) Top() *PriceLevel {
+func (bidH *BidHeap) Top() *priceLevel {
 	return (*bidH)[0]
 }
 
 /*******************************************************************************/
 
 //Price levels in AskHeap shall be in ascending order
-type AskHeap []*PriceLevel
+type AskHeap []*priceLevel
 
 func (askH AskHeap) Len() int { return len(askH) }
 
@@ -65,7 +65,7 @@ func (askH AskHeap) Swap(i, j int) {
 
 func (askH *AskHeap) Push(x interface{}) {
 	n := len(*askH)
-	pricelevel := x.(*PriceLevel)
+	pricelevel := x.(*priceLevel)
 	pricelevel.Index = n
 	*askH = append(*askH, pricelevel)
 }
@@ -80,16 +80,12 @@ func (askH *AskHeap) Pop() interface{} {
 	return pricelevel
 }
 
-func (askH *AskHeap) Top() *PriceLevel {
+func (askH *AskHeap) Top() *priceLevel {
 	return (*askH)[0]
 }
 
 /*******************************************************************************/
 
-type PriceVol struct {
-	Price  float64
-	Volume float64
-}
 type OrderBook struct {
 	Exchange  int
 	PricePair string
@@ -97,7 +93,7 @@ type OrderBook struct {
 	Asks      *AskHeap
 }
 
-type PriceLevel struct {
+type priceLevel struct {
 	Price  float64
 	Volume float64
 	Index  int
@@ -106,19 +102,19 @@ type PriceLevel struct {
 /*******************************************************************************/
 
 //Testing Helpers
-func popAskHeap(ah *AskHeap) PriceLevel {
-	return *(heap.Pop(ah).(*PriceLevel))
+func popAskHeap(ah *AskHeap) priceLevel {
+	return *(heap.Pop(ah).(*priceLevel))
 }
 
-func popBidHeap(bh *BidHeap) PriceLevel {
-	return *(heap.Pop(bh).(*PriceLevel))
+func popBidHeap(bh *BidHeap) priceLevel {
+	return *(heap.Pop(bh).(*priceLevel))
 }
 
-func (ob *OrderBook) getLowestAsk() PriceLevel {
+func (ob *OrderBook) getLowestAsk() priceLevel {
 	return *(*(ob.Asks))[0]
 }
 
-func (ob *OrderBook) getHighestBid() PriceLevel {
+func (ob *OrderBook) getHighestBid() priceLevel {
 	return *(*(ob.Bids))[0]
 }
 
@@ -138,7 +134,7 @@ func NewOrderBook(exchange int, pricepair string, msg []byte) (*OrderBook, error
 			bidPriceF, err := strconv.ParseFloat(bidPrice, 64)
 			bidVolF, err := strconv.ParseFloat(bidVol, 64)
 
-			pricelevel := &PriceLevel{Price: bidPriceF, Volume: bidVolF, Index: i}
+			pricelevel := &priceLevel{Price: bidPriceF, Volume: bidVolF, Index: i}
 			i++
 			bh = append(bh, pricelevel)
 		}, "bids")
@@ -153,7 +149,7 @@ func NewOrderBook(exchange int, pricepair string, msg []byte) (*OrderBook, error
 			askPriceF, err := strconv.ParseFloat(askPrice, 64)
 			askVolF, err := strconv.ParseFloat(askVol, 64)
 
-			pricelevel := &PriceLevel{Price: askPriceF, Volume: askVolF, Index: i}
+			pricelevel := &priceLevel{Price: askPriceF, Volume: askVolF, Index: i}
 			i++
 			ah = append(ah, pricelevel)
 		}, "asks")
@@ -165,4 +161,14 @@ func NewOrderBook(exchange int, pricepair string, msg []byte) (*OrderBook, error
 	}
 
 	return nil, nil
+}
+
+func (ob *OrderBook) locatePriceLevel() {
+
+}
+
+// BatchUpdate will perform N number of updates/deletes on a Heap. Once all actions are completed,
+// the heap invariant will be restored.
+func (ob *OrderBook) BatchUpdate() {
+
 }
