@@ -7,12 +7,27 @@ import (
 
 	"../../common/constants"
 	"github.com/buger/jsonparser"
-	"github.com/steveyen/gtreap" //Note that this is an immutable treap
+	"github.com/sirupsen/logrus"
+	"github.com/steveyen/gtreap" //Note that this is an immutable treap, TODO: add a size() function to this
 )
 
+/* TODO:
+*	- Consider modifying get price level functions to returning structs instead of pointers...esp if any of this is to be used in parallel
+*
+ */
+
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano()) //Look into alternatives to derive probalistic key
 }
+
+type OrderBookTreap struct {
+	Exchange  int
+	PricePair string
+	bids      *gtreap.Treap //Treap of *priceLevel
+	asks      *gtreap.Treap //Treap of *priceLevel
+}
+
+/*******************************************************************************/
 
 func priceLevelAscendingCompare(a, b interface{}) int {
 	if (*a.(*priceLevel)).Price < (*b.(*priceLevel)).Price {
@@ -32,13 +47,6 @@ func priceLevelDescendingCompare(a, b interface{}) int {
 	} else {
 		return 0
 	}
-}
-
-type OrderBookTreap struct {
-	Exchange  int
-	PricePair string
-	bids      *gtreap.Treap //Treap of *priceLevel
-	asks      *gtreap.Treap //Treap of *priceLevel
 }
 
 // Returns a pointer to the Ask Price Level if it exists in the Asks Treap
@@ -61,6 +69,16 @@ func (ob *OrderBookTreap) getMinAskPriceLevel() *priceLevel {
 
 func (ob *OrderBookTreap) deleteAskPriceLevel(price float64) {
 	ob.asks = ob.asks.Delete(&priceLevel{Price: price})
+}
+
+func (ob *OrderBookTreap) insertAskPriceLevel(price float64, volume float64) {
+	foundPl := ob.getAskPriceLevel(price)
+	if foundPl != nil {
+		//Already exists
+		return
+	}
+	insertPl := &priceLevel{Price: price, Volume: volume}
+	ob.asks = ob.asks.Upsert(insertPl, rand.Int())
 }
 
 func (ob *OrderBookTreap) updateAskPriceLevel(price float64, volume float64) {
@@ -95,8 +113,19 @@ func (ob *OrderBookTreap) updateBidPriceLevel(price float64, volume float64) {
 	ob.bids = ob.bids.Upsert(&priceLevel{Price: price, Volume: volume}, rand.Int())
 }
 
+func (ob *OrderBookTreap) insertBidPriceLevel(price float64, volume float64) {
+	foundPl := ob.getBidPriceLevel(price)
+	if foundPl != nil {
+		//Already exists
+		return
+	}
+	insertPl := &priceLevel{Price: price, Volume: volume}
+	ob.bids = ob.bids.Upsert(insertPl, rand.Int())
+}
+
 /*******************************************************************************/
 
+// Known issue with callback error handling: https://github.com/buger/jsonparser/issues/129
 func NewOrderBookTreap(exchange int, pricepair string, msg []byte) (*OrderBookTreap, error) {
 	if exchange == constants.CoinbasePro {
 		bidTreap := gtreap.NewTreap(priceLevelAscendingCompare)
@@ -104,29 +133,104 @@ func NewOrderBookTreap(exchange int, pricepair string, msg []byte) (*OrderBookTr
 
 		//Initialize bid treap
 		i := 0
-		jsonparser.ArrayEach(msg, func(value []byte, datatype jsonparser.ValueType, offset int, err error) {
+		var innerErr error
+		_, err := jsonparser.ArrayEach(msg, func(value []byte, datatype jsonparser.ValueType, offset int, err error) {
+			if innerErr != nil {
+				//Skip callback iteration if an error was detected previously...
+				return
+			}
 			bidPrice, err := jsonparser.GetString(value, "[0]")
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 			bidVol, err := jsonparser.GetString(value, "[1]")
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 			bidPriceF, err := strconv.ParseFloat(bidPrice, 64)
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 			bidVolF, err := strconv.ParseFloat(bidVol, 64)
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 
 			pricelevel := &priceLevel{Price: bidPriceF, Volume: bidVolF, Index: i}
 			i++
 			bidTreap = bidTreap.Upsert(pricelevel, rand.Int())
 		}, "bids")
 
+		//Handle ArrayEach error
+		if err != nil {
+			logrus.Error(err)
+			return nil, err
+		}
+		//Handle ArrayEach callback error
+		if innerErr != nil {
+			return nil, innerErr
+		}
+
 		//Initialize ask Treap
 		i = 0
-		jsonparser.ArrayEach(msg, func(value []byte, datatype jsonparser.ValueType, offset int, err error) {
+		_, err = jsonparser.ArrayEach(msg, func(value []byte, datatype jsonparser.ValueType, offset int, err error) {
+			if innerErr != nil {
+				//Skip callback iteration if an error was detected previously...
+				return
+			}
 			askPrice, err := jsonparser.GetString(value, "[0]")
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 			askVol, err := jsonparser.GetString(value, "[1]")
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 			askPriceF, err := strconv.ParseFloat(askPrice, 64)
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 			askVolF, err := strconv.ParseFloat(askVol, 64)
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
+
+			if err != nil {
+				logrus.Error(err)
+				innerErr = err
+				return
+			}
 
 			pricelevel := &priceLevel{Price: askPriceF, Volume: askVolF, Index: i}
 			i++
 			askTreap = askTreap.Upsert(pricelevel, rand.Int())
 		}, "asks")
+
+		//Handle ArrayEach error
+		if err != nil {
+			logrus.Error(err)
+			return nil, err
+		}
+		//Handle ArrayEach callback error
+		if innerErr != nil {
+			return nil, innerErr
+		}
 
 		ob := &OrderBookTreap{Exchange: exchange, PricePair: pricepair, bids: bidTreap, asks: askTreap}
 		return ob, nil
