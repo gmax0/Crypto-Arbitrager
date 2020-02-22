@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"../common/constants"
+	"../common/structs"
 	coinbaseProParser "../parser/coinbasepro"
 	"./orderbook"
 	"github.com/sirupsen/logrus"
@@ -16,15 +17,15 @@ type UpdateMessage struct {
 }
 
 type Bookkeeper struct {
-	books map[string]map[int]*orderbook.OrderBookTreap //Maps price-pair -> exchange # -> orderbook
-
+	books   map[string]map[int]*orderbook.OrderBookTreap //Maps price-pair -> exchange # -> orderbook
+	outChan chan<- structs.PriceUpdate                   //Outgoing Max Bid or Min Ask update messages
 }
 
 /*******************************************************************************/
 
-func NewBookkeeper() *Bookkeeper {
+func NewBookkeeper(channel chan<- structs.PriceUpdate) *Bookkeeper {
 	b := make(map[string]map[int]*orderbook.OrderBookTreap)
-	bk := &Bookkeeper{books: b}
+	bk := &Bookkeeper{books: b, outChan: channel}
 	return bk
 }
 

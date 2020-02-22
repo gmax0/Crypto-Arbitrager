@@ -7,8 +7,10 @@ import (
 	"os/signal"
 
 	"./bookkeeper"
+
 	coinbasepro "./client/coinbasepro"
 	"./common/constants"
+	"./common/structs"
 	_ "./config"
 
 	"github.com/buger/jsonparser"
@@ -38,8 +40,8 @@ func main() {
 	// c1 := make(chan []byte)
 
 	//Setup Bookkeeper
-	_ = make(chan []byte)
-	bk := bookkeeper.NewBookkeeper()
+	cBk := make(chan structs.PriceUpdate)
+	bk := bookkeeper.NewBookkeeper(cBk)
 
 	//Setup coinbasepro Client Thread
 	cbpClient, err := coinbasepro.NewClient("ws-feed.pro.coinbase.com")
@@ -63,24 +65,9 @@ func main() {
 		return
 	}
 
-	//
-	// cbpPricePairs := []string{"ETH-BTC", "ETH-USD"}
-
-	//Initialize CoinbasePro Pricebook
-	//cbpPb := pricebook.NewPricebook(pricebook.CoinbasePro, cbpPricePairs)
-	//log.Info(cbpPb)
-
-	/*
-		err = cbpClient.Subscribe(jsonFile)
-		if err != nil {
-			log.Fatal("coinbasepro Client write error:", err)
-			return
-		}
-	*/
 	cbpClient.SetSubscribeMessage(jsonFile)
 	cbpClient.SetUnsubscribeMessage(jsonFile2)
 
-	// go client.
 	go cbpClient.StartStreaming(c1, interrupt)
 
 	maxSizeReached := 0
@@ -121,7 +108,6 @@ func main() {
 					return
 				}
 				bk.ProcessPriceUpdate(constants.CoinbasePro, pricePair, message)
-
 			}
 		case <-interrupt:
 			log.Println("interrupt")
@@ -137,9 +123,11 @@ func main() {
 
 			log.Info("Max Chan Size Reached: ", maxSizeReached)
 			log.Info("Messages Received: ", msgReceived)
-			log.Info(bk.GetBooks())
 
-			log.Info(bk.GetBooks())
+			//Test log
+			log.Info((bk.GetBooks()["ETH-USD"][constants.CoinbasePro]).GetMaxBidPriceLevel())
+			log.Info((bk.GetBooks()["ETH-USD"][constants.CoinbasePro]).GetMinAskPriceLevel())
+
 			return
 		}
 	}
