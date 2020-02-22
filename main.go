@@ -7,7 +7,6 @@ import (
 	"os/signal"
 
 	"./bookkeeper"
-	pricebook "./bookkeeper/pricebook"
 	coinbasepro "./client/coinbasepro"
 	"./common/constants"
 	_ "./config"
@@ -65,11 +64,11 @@ func main() {
 	}
 
 	//
-	cbpPricePairs := []string{"ETH-BTC", "ETH-USD"}
+	// cbpPricePairs := []string{"ETH-BTC", "ETH-USD"}
 
 	//Initialize CoinbasePro Pricebook
-	cbpPb := pricebook.NewPricebook(pricebook.CoinbasePro, cbpPricePairs)
-	log.Info(cbpPb)
+	//cbpPb := pricebook.NewPricebook(pricebook.CoinbasePro, cbpPricePairs)
+	//log.Info(cbpPb)
 
 	/*
 		err = cbpClient.Subscribe(jsonFile)
@@ -110,11 +109,19 @@ func main() {
 					return
 				}
 
+				//Initialize the orderbook for price pair on exchange
 				err = bk.InitBook(constants.CoinbasePro, pricePair, message)
 				if err != nil {
 					log.Error(err)
 				}
 			} else if msgType == "l2update" {
+				pricePair, err := jsonparser.GetString(message, "product_id")
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				bk.ProcessPriceUpdate(constants.CoinbasePro, pricePair, message)
+
 			}
 		case <-interrupt:
 			log.Println("interrupt")
@@ -130,7 +137,7 @@ func main() {
 
 			log.Info("Max Chan Size Reached: ", maxSizeReached)
 			log.Info("Messages Received: ", msgReceived)
-			log.Info(cbpPb)
+			log.Info(bk.GetBooks())
 
 			log.Info(bk.GetBooks())
 			return

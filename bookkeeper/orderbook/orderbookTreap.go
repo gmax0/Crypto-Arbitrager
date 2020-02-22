@@ -51,7 +51,7 @@ func priceLevelDescendingCompare(a, b interface{}) int {
 
 // Returns a pointer to the Ask Price Level if it exists in the Asks Treap
 // O(logN) assuming probalistic tree height is achieved
-func (ob *OrderBookTreap) getAskPriceLevel(price float64) *priceLevel {
+func (ob *OrderBookTreap) GetAskPriceLevel(price float64) *priceLevel {
 	pl := ob.asks.Get(&priceLevel{Price: price})
 	if pl == nil {
 		return nil
@@ -59,7 +59,7 @@ func (ob *OrderBookTreap) getAskPriceLevel(price float64) *priceLevel {
 	return pl.(*priceLevel)
 }
 
-func (ob *OrderBookTreap) getMinAskPriceLevel() *priceLevel {
+func (ob *OrderBookTreap) GetMinAskPriceLevel() *priceLevel {
 	pl := ob.asks.Min()
 	if pl == nil {
 		return nil
@@ -67,12 +67,12 @@ func (ob *OrderBookTreap) getMinAskPriceLevel() *priceLevel {
 	return pl.(*priceLevel)
 }
 
-func (ob *OrderBookTreap) deleteAskPriceLevel(price float64) {
+func (ob *OrderBookTreap) DeleteAskPriceLevel(price float64) {
 	ob.asks = ob.asks.Delete(&priceLevel{Price: price})
 }
 
-func (ob *OrderBookTreap) insertAskPriceLevel(price float64, volume float64) {
-	foundPl := ob.getAskPriceLevel(price)
+func (ob *OrderBookTreap) InsertAskPriceLevel(price float64, volume float64) {
+	foundPl := ob.GetAskPriceLevel(price)
 	if foundPl != nil {
 		//Already exists
 		return
@@ -81,14 +81,14 @@ func (ob *OrderBookTreap) insertAskPriceLevel(price float64, volume float64) {
 	ob.asks = ob.asks.Upsert(insertPl, rand.Int())
 }
 
-func (ob *OrderBookTreap) updateAskPriceLevel(price float64, volume float64) {
-	ob.deleteAskPriceLevel(price)
+func (ob *OrderBookTreap) UpdateAskPriceLevel(price float64, volume float64) {
+	ob.DeleteAskPriceLevel(price)
 	ob.asks = ob.asks.Upsert(&priceLevel{Price: price, Volume: volume}, rand.Int())
 }
 
 // Returns a pointer to the Bid Price Level if it exists in the Bids Treap
 // O(logN) assuming probalistic tree height is achieved
-func (ob *OrderBookTreap) getBidPriceLevel(price float64) *priceLevel {
+func (ob *OrderBookTreap) GetBidPriceLevel(price float64) *priceLevel {
 	pl := ob.bids.Get(&priceLevel{Price: price})
 	if pl == nil {
 		return nil
@@ -96,7 +96,7 @@ func (ob *OrderBookTreap) getBidPriceLevel(price float64) *priceLevel {
 	return pl.(*priceLevel)
 }
 
-func (ob *OrderBookTreap) getMaxBidPriceLevel() *priceLevel {
+func (ob *OrderBookTreap) GetMaxBidPriceLevel() *priceLevel {
 	pl := ob.bids.Max()
 	if pl == nil {
 		return nil
@@ -104,17 +104,17 @@ func (ob *OrderBookTreap) getMaxBidPriceLevel() *priceLevel {
 	return pl.(*priceLevel)
 }
 
-func (ob *OrderBookTreap) deleteBidPriceLevel(price float64) {
+func (ob *OrderBookTreap) DeleteBidPriceLevel(price float64) {
 	ob.bids = ob.bids.Delete(&priceLevel{Price: price})
 }
 
-func (ob *OrderBookTreap) updateBidPriceLevel(price float64, volume float64) {
-	ob.deleteBidPriceLevel(price)
+func (ob *OrderBookTreap) UpdateBidPriceLevel(price float64, volume float64) {
+	ob.DeleteBidPriceLevel(price)
 	ob.bids = ob.bids.Upsert(&priceLevel{Price: price, Volume: volume}, rand.Int())
 }
 
-func (ob *OrderBookTreap) insertBidPriceLevel(price float64, volume float64) {
-	foundPl := ob.getBidPriceLevel(price)
+func (ob *OrderBookTreap) InsertBidPriceLevel(price float64, volume float64) {
+	foundPl := ob.GetBidPriceLevel(price)
 	if foundPl != nil {
 		//Already exists
 		return

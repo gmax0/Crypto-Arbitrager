@@ -3,20 +3,27 @@ package bookkeeper
 import (
 	"fmt"
 
+	"../common/constants"
+	coinbaseProParser "../parser/coinbasepro"
 	"./orderbook"
+	"github.com/sirupsen/logrus"
 )
 
-//
+/*******************************************************************************/
+
+//Create
 type UpdateMessage struct {
 }
 
 type Bookkeeper struct {
-	books map[string]map[int]*orderbook.OrderBook //Maps price-pair -> exchange # -> orderbook
+	books map[string]map[int]*orderbook.OrderBookTreap //Maps price-pair -> exchange # -> orderbook
 
 }
 
+/*******************************************************************************/
+
 func NewBookkeeper() *Bookkeeper {
-	b := make(map[string]map[int]*orderbook.OrderBook)
+	b := make(map[string]map[int]*orderbook.OrderBookTreap)
 	bk := &Bookkeeper{books: b}
 	return bk
 }
@@ -30,19 +37,39 @@ func (bk *Bookkeeper) InitBook(exchange int, pricepair string, msg []byte) error
 		return fmt.Errorf("Existing orderbook exists for pricepair: %s, exchange %d", pricepair, exchange)
 	}
 
-	ob, err := orderbook.NewOrderBook(exchange, pricepair, msg)
+	ob, err := orderbook.NewOrderBookTreap(exchange, pricepair, msg)
 	if err != nil {
 		return err
 	}
 
 	if bk.books[pricepair] == nil {
-		bk.books[pricepair] = make(map[int]*orderbook.OrderBook)
+		bk.books[pricepair] = make(map[int]*orderbook.OrderBookTreap)
 	}
 	bk.books[pricepair][exchange] = ob
 
 	return nil
 }
 
-func (bk *Bookkeeper) GetBooks() map[string]map[int]*orderbook.OrderBook {
+// TODO: Refactor orderbook calls to use Bid/Ask as argument
+
+// ProcessPriceUpdate
+func (bk *Bookkeeper) ProcessPriceUpdate(exchange int, pricepair string, msg []byte) {
+	switch exchange {
+	case constants.CoinbasePro:
+		bidUpdates, askUpdates, err := coinbaseProParser.ParseUpdateMessage(msg)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+		for _, bu := range bidUpdates {
+			bk.books[pricepair][exchange].UpdateBidPriceLevel(bu.Price, bu.Volume)
+		}
+		for _, au := range askUpdates {
+			bk.books[pricepair][exchange].UpdateAskPriceLevel(au.Price, au.Volume)
+		}
+	}
+}
+
+func (bk *Bookkeeper) GetBooks() map[string]map[int]*orderbook.OrderBookTreap {
 	return bk.books
 }

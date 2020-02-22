@@ -31,7 +31,7 @@ func TestNewOrderBookTreap(t *testing.T) {
 		bidPriceF, err := strconv.ParseFloat(bidPrice, 64)
 		bidVolF, err := strconv.ParseFloat(bidVol, 64)
 
-		pl := cbOb.getMaxBidPriceLevel()
+		pl := cbOb.GetMaxBidPriceLevel()
 		if (*pl).Price != bidPriceF {
 			t.Errorf("Price level %d, expected bid price: %f, got %f", i, bidPriceF, pl.Price)
 		}
@@ -39,7 +39,7 @@ func TestNewOrderBookTreap(t *testing.T) {
 			t.Errorf("Price level %d, expected bid vol: %f, got %f", i, bidVolF, pl.Volume)
 		}
 
-		cbOb.deleteBidPriceLevel((*pl).Price)
+		cbOb.DeleteBidPriceLevel((*pl).Price)
 
 		i++
 	}, "bids")
@@ -51,7 +51,7 @@ func TestNewOrderBookTreap(t *testing.T) {
 		askPriceF, err := strconv.ParseFloat(askPrice, 64)
 		askVolF, err := strconv.ParseFloat(askVol, 64)
 
-		pl := cbOb.getMinAskPriceLevel()
+		pl := cbOb.GetMinAskPriceLevel()
 		if (*pl).Price != askPriceF {
 			t.Errorf("Price level %d, expected ask price: %f, got %f", i, askPriceF, pl.Price)
 		}
@@ -59,7 +59,7 @@ func TestNewOrderBookTreap(t *testing.T) {
 			t.Errorf("Price level %d, expected ask vol: %f, got %f", i, askVolF, pl.Volume)
 		}
 
-		cbOb.deleteAskPriceLevel((*pl).Price)
+		cbOb.DeleteAskPriceLevel((*pl).Price)
 		i++
 	}, "asks")
 }
@@ -78,12 +78,12 @@ func TestTreapOperations(t *testing.T) {
 	}
 
 	//Both Bids + Ask Treaps should initially be empty
-	pl := cbOb.getMinAskPriceLevel()
+	pl := cbOb.GetMinAskPriceLevel()
 	if pl != nil {
 		t.Error("Expected pl nil")
 		return
 	}
-	pl = cbOb.getMaxBidPriceLevel()
+	pl = cbOb.GetMaxBidPriceLevel()
 	if pl != nil {
 		t.Error("Expected pl nil")
 		return
@@ -101,8 +101,8 @@ func TestTreapOperations(t *testing.T) {
 			expect Min Ask: [100.1, 2]
 	*/
 
-	cbOb.insertAskPriceLevel(100.1, 1)
-	pl = cbOb.getMinAskPriceLevel()
+	cbOb.InsertAskPriceLevel(100.1, 1)
+	pl = cbOb.GetMinAskPriceLevel()
 	if price := (*pl).Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
@@ -110,8 +110,8 @@ func TestTreapOperations(t *testing.T) {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
 
-	cbOb.updateAskPriceLevel(100.1, 2)
-	pl = cbOb.getMinAskPriceLevel()
+	cbOb.UpdateAskPriceLevel(100.1, 2)
+	pl = cbOb.GetMinAskPriceLevel()
 	if price := (*pl).Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
@@ -119,8 +119,8 @@ func TestTreapOperations(t *testing.T) {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
 
-	cbOb.insertAskPriceLevel(10.9, 1)
-	pl = cbOb.getMinAskPriceLevel()
+	cbOb.InsertAskPriceLevel(10.9, 1)
+	pl = cbOb.GetMinAskPriceLevel()
 	if price := (*pl).Price; price != 10.9 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
@@ -128,8 +128,8 @@ func TestTreapOperations(t *testing.T) {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
 
-	cbOb.deleteAskPriceLevel(10.9)
-	pl = cbOb.getMinAskPriceLevel()
+	cbOb.DeleteAskPriceLevel(10.9)
+	pl = cbOb.GetMinAskPriceLevel()
 	if price := (*pl).Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
@@ -148,8 +148,8 @@ func TestTreapOperations(t *testing.T) {
 		DEL [200, 1]
 			expect Max Bid: [100.1, 2]
 	*/
-	cbOb.insertBidPriceLevel(100.1, 1)
-	pl = cbOb.getMaxBidPriceLevel()
+	cbOb.InsertBidPriceLevel(100.1, 1)
+	pl = cbOb.GetMaxBidPriceLevel()
 	if price := (*pl).Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
@@ -157,8 +157,8 @@ func TestTreapOperations(t *testing.T) {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
 
-	cbOb.updateBidPriceLevel(100.1, 2)
-	pl = cbOb.getMaxBidPriceLevel()
+	cbOb.UpdateBidPriceLevel(100.1, 2)
+	pl = cbOb.GetMaxBidPriceLevel()
 	if price := (*pl).Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
@@ -166,8 +166,8 @@ func TestTreapOperations(t *testing.T) {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
 
-	cbOb.insertBidPriceLevel(200, 1)
-	pl = cbOb.getMaxBidPriceLevel()
+	cbOb.InsertBidPriceLevel(200, 1)
+	pl = cbOb.GetMaxBidPriceLevel()
 	if price := (*pl).Price; price != 200 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
@@ -175,8 +175,8 @@ func TestTreapOperations(t *testing.T) {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
 
-	cbOb.deleteBidPriceLevel(200)
-	pl = cbOb.getMaxBidPriceLevel()
+	cbOb.DeleteBidPriceLevel(200)
+	pl = cbOb.GetMaxBidPriceLevel()
 	if price := (*pl).Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
