@@ -22,10 +22,10 @@ func init() {
 type OrderBookTreap struct {
 	Exchange  int
 	PricePair string
-	bids      *gtreap.Treap //Treap of *priceLevel
-	asks      *gtreap.Treap //Treap of *priceLevel
-	MaxBid    structs.Bid
-	MinAsk    structs.Ask
+	bids      *gtreap.Treap //Treap of structs.PriceLevel
+	asks      *gtreap.Treap //Treap of structs.PriceLevel
+	MaxBid    structs.PriceLevel
+	MinAsk    structs.PriceLevel
 }
 
 /*******************************************************************************/
@@ -124,8 +124,8 @@ func (ob *OrderBookTreap) InsertBidPriceLevel(price float64, volume float64) {
 
 // Known issue with callback error handling: https://github.com/buger/jsonparser/issues/129
 func NewOrderBookTreap(exchange int, pricepair string, msg []byte) (*OrderBookTreap, error) {
-	var bids []structs.Bid
-	var asks []structs.Ask
+	var bids []structs.PriceLevel
+	var asks []structs.PriceLevel
 	var err error
 
 	switch exchange {

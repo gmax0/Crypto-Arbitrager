@@ -1,15 +1,5 @@
 package structs
 
-type Bid struct {
-	Price  float64
-	Volume float64
-}
-
-type Ask struct {
-	Price  float64
-	Volume float64
-}
-
 type PriceLevel struct {
 	Price  float64
 	Volume float64
@@ -22,6 +12,6 @@ type PriceUpdate struct {
 	UpdateType string
 	Exchange   int
 	PricePair  string
-	UpdateAsk  Ask
-	UpdateBid  Bid
+	UpdateAsk  PriceLevel
+	UpdateBid  PriceLevel
 }

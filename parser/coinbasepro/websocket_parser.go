@@ -18,9 +18,9 @@ func coinbaseSplitter(c rune) bool {
 // ParseSnapshotMessage will parse the JSON Snapshot Message received through the
 // CoinbasePro Websocket Feed and return the data in canoniclized structures
 // * Known issue with callback error handling: https://github.com/buger/jsonparser/issues/129
-func ParseSnapshotMessage(msg []byte) ([]structs.Bid, []structs.Ask, error) {
-	var bids []structs.Bid
-	var asks []structs.Ask
+func ParseSnapshotMessage(msg []byte) ([]structs.PriceLevel, []structs.PriceLevel, error) {
+	var bids []structs.PriceLevel
+	var asks []structs.PriceLevel
 
 	var innerErr error
 
@@ -56,8 +56,8 @@ func ParseSnapshotMessage(msg []byte) ([]structs.Bid, []structs.Ask, error) {
 			return
 		}
 
-		bid := &structs.Bid{Price: bidPriceF, Volume: bidVolF}
-		bids = append(bids, *bid)
+		bid := structs.PriceLevel{Price: bidPriceF, Volume: bidVolF}
+		bids = append(bids, bid)
 	}, "bids")
 
 	//Handle ArrayEach error
@@ -107,8 +107,8 @@ func ParseSnapshotMessage(msg []byte) ([]structs.Bid, []structs.Ask, error) {
 			return
 		}
 
-		ask := &structs.Ask{Price: askPriceF, Volume: askVolF}
-		asks = append(asks, *ask)
+		ask := structs.PriceLevel{Price: askPriceF, Volume: askVolF}
+		asks = append(asks, ask)
 	}, "asks")
 
 	//Handle ArrayEach error
@@ -130,9 +130,9 @@ func ParseSnapshotMessage(msg []byte) ([]structs.Bid, []structs.Ask, error) {
 // CoinbasePro Websocket Feed and return the data in canoniclized structures
 // Returns variable sized []structs.Bid, []structs.Ask in case multiple updates are present
 // in a single message
-func ParseUpdateMessage(msg []byte) ([]structs.Bid, []structs.Ask, error) {
-	var bidUpdates []structs.Bid
-	var askUpdates []structs.Ask
+func ParseUpdateMessage(msg []byte) ([]structs.PriceLevel, []structs.PriceLevel, error) {
+	var bidUpdates []structs.PriceLevel
+	var askUpdates []structs.PriceLevel
 
 	var innerErr error
 
@@ -164,15 +164,15 @@ func ParseUpdateMessage(msg []byte) ([]structs.Bid, []structs.Ask, error) {
 
 		if parsedUpdate[0] == "buy" {
 			logrus.Info("BUY!")
-			bu := &structs.Bid{Price: price, Volume: volume}
-			bidUpdates = append(bidUpdates, *bu)
+			bu := structs.PriceLevel{Price: price, Volume: volume}
+			bidUpdates = append(bidUpdates, bu)
 			return
 		}
 
 		if parsedUpdate[0] == "sell" {
 			logrus.Info("SELL!")
-			au := &structs.Ask{Price: price, Volume: volume}
-			askUpdates = append(askUpdates, *au)
+			au := structs.PriceLevel{Price: price, Volume: volume}
+			askUpdates = append(askUpdates, au)
 			return
 		}
 	}, "changes")
