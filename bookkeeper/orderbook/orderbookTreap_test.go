@@ -12,6 +12,23 @@ import (
 
 //TODO: Benchmark tests for treap operations
 
+/*
+func TestNewOrderBookTreapEmpty(t *testing.T) {
+	snapshotResp, err := testhelpers.GetMsgFromFile("../../testhelpers/testdata/coinbasepro/test-l2-snapshot-response.json")
+	if err != nil {
+		t.Error("Could not read test file.")
+		return
+	}
+
+	//Initialize, populate treaps based off of L2 Snapshot Message contents
+	cbOb, err := NewOrderBookTreap(constants.CoinbasePro, "ETH-BTC", snapshotResp)
+	if err != nil {
+		t.Error("Error initializing new OrderBookTreap")
+		return
+	}
+}
+*/
+
 func TestNewOrderBookTreap(t *testing.T) {
 	snapshotResp, err := testhelpers.GetMsgFromFile("../../testhelpers/testdata/coinbasepro/test-l2-snapshot-response.json")
 	if err != nil {
@@ -19,9 +36,29 @@ func TestNewOrderBookTreap(t *testing.T) {
 		return
 	}
 
+	//Initialize, populate treaps based off of L2 Snapshot Message contents
 	cbOb, err := NewOrderBookTreap(constants.CoinbasePro, "ETH-BTC", snapshotResp)
 	if err != nil {
 		t.Error("Error initializing new OrderBookTreap")
+		return
+	}
+
+	//Check that sizes have been updated accordingly
+	if cbOb.bidSize != 2685 {
+		t.Errorf("Expected initial BidSize of 2685, got %d", cbOb.bidSize)
+		return
+	}
+	if cbOb.askSize != 8959 {
+		t.Errorf("Expected initial AskSize of 8959, got %d", cbOb.askSize)
+		return
+	}
+	//Check initial Min/Max price values
+	if cbOb.maxBid.Price != 188.51 {
+		t.Errorf("Expected initial MaxBid.Price of 188.51, got %f", cbOb.maxBid.Price)
+		return
+	}
+	if cbOb.minAsk.Price != 188.52 {
+		t.Errorf("Expected initial MinAsk.Price of 188.52, got %f", cbOb.minAsk.Price)
 		return
 	}
 
@@ -40,7 +77,7 @@ func TestNewOrderBookTreap(t *testing.T) {
 			t.Errorf("Price level %d, expected bid vol: %f, got %f", i, bidVolF, pl.Volume)
 		}
 
-		cbOb.DeleteBidPriceLevel(pl.Price)
+		cbOb.DeleteBidPriceLevel(pl)
 
 		i++
 	}, "bids")
@@ -60,9 +97,18 @@ func TestNewOrderBookTreap(t *testing.T) {
 			t.Errorf("Price level %d, expected ask vol: %f, got %f", i, askVolF, pl.Volume)
 		}
 
-		cbOb.DeleteAskPriceLevel(pl.Price)
+		cbOb.DeleteAskPriceLevel(pl)
 		i++
 	}, "asks")
+
+	if cbOb.bidSize != 0 {
+		t.Error("Expected final bidSize 0")
+		return
+	}
+	if cbOb.askSize != 0 {
+		t.Error("Expected final askSize 0")
+		return
+	}
 }
 
 func TestTreapOperations(t *testing.T) {
@@ -95,47 +141,59 @@ func TestTreapOperations(t *testing.T) {
 		INS [100.1, 1]
 			expect Min Ask: [100.1, 1]
 		UPD [100.1, 1] -> [100.1, 2]
-			expect Min Ask: [100.1, 2]
+			expect Min Ask: [100, 2]
 		INS [10.9 , 1]
 			expect Min Ask: [10.9, 1]
 		DEL [10.9, 1]
 			expect Min Ask: [100.1, 2]
 	*/
 
-	cbOb.InsertAskPriceLevel(100.1, 1)
+	cbOb.UpsertAskPriceLevel(structs.PriceLevel{Price: 100.1, Volume: 1})
 	pl = cbOb.GetMinAskPriceLevel()
 	if price := pl.Price; price != 100.1 {
-		t.Errorf("Expected volume %f, got %f", 100.1, price)
+		t.Errorf("Expected price %f, got %f", 100.1, price)
 	}
 	if volume := pl.Volume; volume != 1 {
-		t.Errorf("Expected volume %f, got %f", 100.1, volume)
+		t.Errorf("Expected volume %f, got %f", 1.0, volume)
+	}
+	if size := cbOb.askSize; size != 1 {
+		t.Errorf("Expected ask treap size: 1, got %d", size)
 	}
 
-	cbOb.UpdateAskPriceLevel(100.1, 2)
+	cbOb.UpsertAskPriceLevel(structs.PriceLevel{Price: 100.1, Volume: 2})
 	pl = cbOb.GetMinAskPriceLevel()
 	if price := pl.Price; price != 100.1 {
-		t.Errorf("Expected volume %f, got %f", 100.1, price)
+		t.Errorf("Expected price %f, got %f", 100.1, price)
 	}
 	if volume := pl.Volume; volume != 2 {
-		t.Errorf("Expected volume %f, got %f", 100.1, volume)
+		t.Errorf("Expected volume %f, got %f", 2.0, volume)
+	}
+	if size := cbOb.askSize; size != 1 {
+		t.Errorf("Expected ask treap size: 2, got %d", size)
 	}
 
-	cbOb.InsertAskPriceLevel(10.9, 1)
+	cbOb.UpsertAskPriceLevel(structs.PriceLevel{Price: 10.9, Volume: 1})
 	pl = cbOb.GetMinAskPriceLevel()
 	if price := pl.Price; price != 10.9 {
-		t.Errorf("Expected volume %f, got %f", 100.1, price)
+		t.Errorf("Expected price %f, got %f", 10.9, price)
 	}
 	if volume := pl.Volume; volume != 1 {
-		t.Errorf("Expected volume %f, got %f", 100.1, volume)
+		t.Errorf("Expected volume %f, got %f", 1.0, volume)
+	}
+	if size := cbOb.askSize; size != 2 {
+		t.Errorf("Expected ask treap size: 2, got %d", size)
 	}
 
-	cbOb.DeleteAskPriceLevel(10.9)
+	cbOb.DeleteAskPriceLevel(structs.PriceLevel{Price: 10.9})
 	pl = cbOb.GetMinAskPriceLevel()
 	if price := pl.Price; price != 100.1 {
-		t.Errorf("Expected volume %f, got %f", 100.1, price)
+		t.Errorf("Expected price %f, got %f", 100.1, price)
 	}
 	if volume := pl.Volume; volume != 2 {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
+	}
+	if size := cbOb.askSize; size != 1 {
+		t.Errorf("Expected ask treap size: 2, got %d", size)
 	}
 
 	//Bid Treap Operations:
@@ -149,7 +207,7 @@ func TestTreapOperations(t *testing.T) {
 		DEL [200, 1]
 			expect Max Bid: [100.1, 2]
 	*/
-	cbOb.InsertBidPriceLevel(100.1, 1)
+	cbOb.UpsertBidPriceLevel(structs.PriceLevel{Price: 100.1, Volume: 1})
 	pl = cbOb.GetMaxBidPriceLevel()
 	if price := pl.Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
@@ -157,8 +215,11 @@ func TestTreapOperations(t *testing.T) {
 	if volume := pl.Volume; volume != 1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
+	if size := cbOb.bidSize; size != 1 {
+		t.Errorf("Expected bid treap size: 1, got %d", size)
+	}
 
-	cbOb.UpdateBidPriceLevel(100.1, 2)
+	cbOb.UpsertBidPriceLevel(structs.PriceLevel{Price: 100.1, Volume: 2})
 	pl = cbOb.GetMaxBidPriceLevel()
 	if price := pl.Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
@@ -166,8 +227,11 @@ func TestTreapOperations(t *testing.T) {
 	if volume := pl.Volume; volume != 2 {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
+	if size := cbOb.bidSize; size != 1 {
+		t.Errorf("Expected bid treap size: 1, got %d", size)
+	}
 
-	cbOb.InsertBidPriceLevel(200, 1)
+	cbOb.UpsertBidPriceLevel(structs.PriceLevel{Price: 200, Volume: 1})
 	pl = cbOb.GetMaxBidPriceLevel()
 	if price := pl.Price; price != 200 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
@@ -175,14 +239,20 @@ func TestTreapOperations(t *testing.T) {
 	if volume := pl.Volume; volume != 1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
 	}
+	if size := cbOb.bidSize; size != 2 {
+		t.Errorf("Expected bid treap size: 2, got %d", size)
+	}
 
-	cbOb.DeleteBidPriceLevel(200)
+	cbOb.DeleteBidPriceLevel(structs.PriceLevel{Price: 200})
 	pl = cbOb.GetMaxBidPriceLevel()
 	if price := pl.Price; price != 100.1 {
 		t.Errorf("Expected volume %f, got %f", 100.1, price)
 	}
 	if volume := pl.Volume; volume != 2 {
 		t.Errorf("Expected volume %f, got %f", 100.1, volume)
+	}
+	if size := cbOb.bidSize; size != 1 {
+		t.Errorf("Expected bid treap size: 1, got %d", size)
 	}
 
 }
@@ -200,7 +270,7 @@ func TestTreapUpdateZeroVolume(t *testing.T) {
 		return
 	}
 
-	cbOb.InsertAskPriceLevel(100, 1)
+	cbOb.UpsertAskPriceLevel(structs.PriceLevel{Price: 100, Volume: 1})
 	pl := cbOb.GetMinAskPriceLevel()
 	if pl == (structs.PriceLevel{}) {
 		t.Error("Expected non empty pl")
@@ -214,12 +284,18 @@ func TestTreapUpdateZeroVolume(t *testing.T) {
 		t.Errorf("Expected price level volume: %f, got %f", 100.0, cbOb.GetMinAskPriceLevel().Volume)
 		return
 	}
+	if size := cbOb.askSize; size != 1 {
+		t.Errorf("Expected ask treap size: 1, got %d", size)
+	}
 
-	cbOb.UpdateAskPriceLevel(100, 0)
+	cbOb.UpsertAskPriceLevel(structs.PriceLevel{Price: 100, Volume: 0})
 	pl = cbOb.GetMinAskPriceLevel()
 	if pl != (structs.PriceLevel{}) {
 		t.Error("Expect empty pl")
 		return
+	}
+	if size := cbOb.askSize; size != 0 {
+		t.Errorf("Expected ask treap size: 0, got %d", size)
 	}
 }
 
@@ -236,5 +312,5 @@ func TestTreapDeleteNonExistent(t *testing.T) {
 		return
 	}
 
-	cbOb.DeleteAskPriceLevel(100)
+	cbOb.DeleteAskPriceLevel(structs.PriceLevel{Price: 0.0})
 }

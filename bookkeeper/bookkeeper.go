@@ -63,10 +63,10 @@ func (bk *Bookkeeper) ProcessPriceUpdate(exchange int, pricepair string, msg []b
 			return
 		}
 		for _, bu := range bidUpdates {
-			bk.books[pricepair][exchange].UpdateBidPriceLevel(bu.Price, bu.Volume)
+			bk.books[pricepair][exchange].UpsertBidPriceLevel(structs.PriceLevel{Price: bu.Price, Volume: bu.Volume})
 		}
 		for _, au := range askUpdates {
-			bk.books[pricepair][exchange].UpdateAskPriceLevel(au.Price, au.Volume)
+			bk.books[pricepair][exchange].UpsertAskPriceLevel(structs.PriceLevel{Price: au.Price, Volume: au.Volume})
 		}
 	}
 }
