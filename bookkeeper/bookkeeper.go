@@ -12,21 +12,15 @@ import (
 
 /*******************************************************************************/
 
-//Create
-type UpdateMessage struct {
-}
-
 type Bookkeeper struct {
 	books   map[string]map[int]*orderbook.OrderBookTreap //Maps price-pair -> exchange # -> orderbook
-	outChan chan<- structs.PriceUpdate                   //Outgoing Max Bid or Min Ask update messages
+	outChan chan<- structs.PriceUpdate                   //Non-blocking, Outgoing Max Bid or Min Ask update messages
 }
 
 /*******************************************************************************/
 
 func NewBookkeeper(channel chan<- structs.PriceUpdate) *Bookkeeper {
-	b := make(map[string]map[int]*orderbook.OrderBookTreap)
-	bk := &Bookkeeper{books: b, outChan: channel}
-	return bk
+	return &Bookkeeper{books: make(map[string]map[int]*orderbook.OrderBookTreap), outChan: channel}
 }
 
 // InitBook will initialize an orderbook entry within the Bookkeeper's Bookkeeper.books map
@@ -48,10 +42,16 @@ func (bk *Bookkeeper) InitBook(exchange int, pricepair string, msg []byte) error
 	}
 	bk.books[pricepair][exchange] = ob
 
+	initialBidUpdate := structs.PriceUpdate{UpdateType: constants.BidUpdate, Exchange: constants.CoinbasePro,
+		PricePair: pricepair, UpdateAsk: ob.GetMaxBidPriceLevel()}
+	initialAskUpdate := structs.PriceUpdate{UpdateType: constants.AskUpdate, Exchange: constants.CoinbasePro,
+		PricePair: pricepair, UpdateAsk: ob.GetMinAskPriceLevel()}
+
+	bk.outChan <- initialBidUpdate
+	bk.outChan <- initialAskUpdate
+
 	return nil
 }
-
-// TODO: Refactor orderbook calls to use Bid/Ask as argument
 
 // ProcessPriceUpdate
 func (bk *Bookkeeper) ProcessPriceUpdate(exchange int, pricepair string, msg []byte) {

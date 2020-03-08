@@ -40,7 +40,7 @@ func main() {
 	// c1 := make(chan []byte)
 
 	//Setup Bookkeeper
-	cBk := make(chan structs.PriceUpdate)
+	cBk := make(chan structs.PriceUpdate, 1000)
 	bk := bookkeeper.NewBookkeeper(cBk)
 
 	//Setup coinbasepro Client Thread

@@ -9,7 +9,7 @@ type PriceLevel struct {
 // PriceUpdate is passed from bookkeeper through its outgoing channel
 // Used for whenever a Min Ask or Max Bid changes for a given price pair
 type PriceUpdate struct {
-	UpdateType string
+	UpdateType bool
 	Exchange   int
 	PricePair  string
 	UpdateAsk  PriceLevel
