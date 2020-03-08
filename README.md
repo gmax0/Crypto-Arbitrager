@@ -29,9 +29,6 @@ Using this [list here](https://nomics.com/exchanges). Preference given for regul
 [ ] Poloniex websocket client code
 [ ] Kraken websocket client code [documentation here](https://docs.kraken.com/websockets/#overview)
 
-#### Potential Algorithms for Arbitrage
-- Bellman-Ford and negative cycle detection
-
 #### Performance Considerations
 - Is a level 2 order book strictly required? Consider the memory overhead of maintaining vs maintaining only the mid-market price...
 - JSON Parsing benchmark tests, look at alternative libraries
