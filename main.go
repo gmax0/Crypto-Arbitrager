@@ -8,7 +8,8 @@ import (
 
 	"./bookkeeper"
 
-	coinbasepro "./client/coinbasepro"
+	_ "./client/coinbasepro"
+	websocket "./client/websocket"
 	"./common/constants"
 	"./common/structs"
 	_ "./config"
@@ -37,6 +38,7 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt)
 
 	c1 := make(chan []byte, 1000)
+	c2 := make(chan []byte, 1000)
 	// c1 := make(chan []byte)
 
 	//Setup Bookkeeper
@@ -44,16 +46,21 @@ func main() {
 	bk := bookkeeper.NewBookkeeper(cBk)
 
 	//Setup coinbasepro Client Thread
-	cbpClient, err := coinbasepro.NewClient("ws-feed.pro.coinbase.com")
+	cbpClient, err := websocket.NewClient("ws-feed.pro.coinbase.com")
+	poloClient, err := websocket.NewClient("api2.poloniex.com")
 	if err != nil {
 		log.Fatal("Unable to initialize coinbasepro Client:", err)
 		return
 	}
 	defer cbpClient.CloseUnderlyingConnection()
+	defer poloClient.CloseUnderlyingConnection()
 
+	fmt.Println("CBP")
 	fmt.Println(cbpClient)
+	fmt.Println("Polo")
+	fmt.Println(poloClient)
 
-	//Setup JSON Message
+	//Setup JSON CoinbasePro
 	jsonFile, err := ioutil.ReadFile("./testhelpers/testdata/coinbasepro/test-l2-subscribe.json")
 	if err != nil {
 		log.Fatal(err)
@@ -65,10 +72,25 @@ func main() {
 		return
 	}
 
+	//Setup JSON Poloniex
+	jsonPolo, err := ioutil.ReadFile("./testhelpers/testdata/poloniex/test-ticker-sub.json")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	jsonPolo2, err := ioutil.ReadFile("./testhelpers/testdata/poloniex/test-ticker-unsub.json")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	cbpClient.SetSubscribeMessage(jsonFile)
 	cbpClient.SetUnsubscribeMessage(jsonFile2)
+	poloClient.SetSubscribeMessage(jsonPolo)
+	poloClient.SetUnsubscribeMessage(jsonPolo2)
 
 	go cbpClient.StartStreaming(c1, interrupt)
+	go poloClient.StartStreaming(c2, interrupt)
 
 	maxSizeReached := 0
 	msgReceived := 0
@@ -109,6 +131,16 @@ func main() {
 				}
 				bk.ProcessPriceUpdate(constants.CoinbasePro, pricePair, message)
 			}
+		case message := <-c2:
+			chanSize := len(c2)
+			msgReceived++
+			if chanSize > maxSizeReached {
+				maxSizeReached = chanSize
+			}
+			log.Info("POLO Channel size: ", chanSize)
+			log.Info(string(message))
+			log.Debug(message)
+
 		case <-interrupt:
 			log.Println("interrupt")
 			err = cbpClient.StopStreaming()
