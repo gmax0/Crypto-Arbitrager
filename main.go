@@ -6,15 +6,12 @@ import (
 	"os"
 	"os/signal"
 
-	"./bookkeeper"
+	cbpBookkeeper "./bookkeeper/coinbasepro"
 
 	_ "./client/coinbasepro"
 	websocket "./client/websocket"
-	"./common/constants"
-	"./common/structs"
 	_ "./config"
 
-	"github.com/buger/jsonparser"
 	"github.com/sirupsen/logrus"
 	_ "github.com/spf13/viper"
 )
@@ -22,6 +19,7 @@ import (
 var log = logrus.New()
 
 func init() {
+	//log.SetFormatter(&log.JSONFormatter{})
 	log.SetFormatter(&logrus.TextFormatter{
 		DisableColors: true,
 		FullTimestamp: true,
@@ -41,9 +39,9 @@ func main() {
 	c2 := make(chan []byte, 1000)
 	// c1 := make(chan []byte)
 
-	//Setup Bookkeeper
-	cBk := make(chan structs.PriceUpdate, 1000)
-	bk := bookkeeper.NewBookkeeper(cBk)
+	//Setup Bookkeepers
+	//cBk := make(chan structs.PriceUpdate, 1000)
+	cbpBk := cbpBookkeeper.NewCoinbaseproBookkeeper()
 
 	//Setup coinbasepro Client Thread
 	cbpClient, err := websocket.NewClient("ws-feed.pro.coinbase.com")
@@ -90,7 +88,7 @@ func main() {
 	poloClient.SetUnsubscribeMessage(jsonPolo2)
 
 	go cbpClient.StartStreaming(c1, interrupt)
-	go poloClient.StartStreaming(c2, interrupt)
+	//go poloClient.StartStreaming(c2, interrupt)
 
 	maxSizeReached := 0
 	msgReceived := 0
@@ -105,32 +103,7 @@ func main() {
 			log.Info("Channel size: ", chanSize)
 			log.Debug(message)
 
-			msgType, err := jsonparser.GetString(message, "type")
-			if err != nil {
-				log.Error(err)
-				return
-			}
-
-			if msgType == "snapshot" {
-				pricePair, err := jsonparser.GetString(message, "product_id")
-				if err != nil {
-					log.Error(err)
-					return
-				}
-
-				//Initialize the orderbook for price pair on exchange
-				err = bk.InitBook(constants.CoinbasePro, pricePair, message)
-				if err != nil {
-					log.Error(err)
-				}
-			} else if msgType == "l2update" {
-				pricePair, err := jsonparser.GetString(message, "product_id")
-				if err != nil {
-					log.Error(err)
-					return
-				}
-				bk.ProcessPriceUpdate(constants.CoinbasePro, pricePair, message)
-			}
+			cbpBk.HandleMessage(message)
 		case message := <-c2:
 			chanSize := len(c2)
 			msgReceived++
@@ -157,8 +130,8 @@ func main() {
 			log.Info("Messages Received: ", msgReceived)
 
 			//Test log
-			log.Info((bk.GetBooks()["ETH-USD"][constants.CoinbasePro]).GetMaxBidPriceLevel())
-			log.Info((bk.GetBooks()["ETH-USD"][constants.CoinbasePro]).GetMinAskPriceLevel())
+			log.Info((cbpBk.B.GetBooks(3).GetMaxBidPriceLevel()))
+			log.Info((cbpBk.B.GetBooks(3).GetMinAskPriceLevel()))
 
 			return
 		}

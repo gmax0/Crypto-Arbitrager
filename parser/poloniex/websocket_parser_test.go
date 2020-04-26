@@ -8,10 +8,21 @@ import (
 	"../../testhelpers"
 
 	_"../../common/structs"
-	"github.com/buger/jsonparser"
+	_"github.com/buger/jsonparser"
 	_"github.com/sirupsen/logrus"
 )
 
+func TestParseSnapshotMessage(t *testing.T) {
+	snapshotResponse, err := testhelpers.GetMsgFromFile("../../testhelpers/testdata/poloniex/test-channel-sub.json")
+	if err != nil {
+		t.Error("Could not read test file")
+		return
+	}
+
+	_, _, _ = ParseSnapshotMessage(snapshotResponse)
+}
+
+/*
 func TestParseSnapshotMessage(t *testing.T) {
 	snapshotResponse, err := testhelpers.GetMsgFromFile("../../testhelpers/testdata/poloniex/test-channel-sub.json")
 	if err != nil {
@@ -40,12 +51,10 @@ func TestParseSnapshotMessage(t *testing.T) {
 			
 	// 			if (d == 1) {
 	// 				t.Log(datatype)
-	// 				/*
 	// 				_, err = jsonparser.ArrayEach(value3 , func(value4 [] byte, datatype jsonparser.ValueType, offset int, err error) {
 	// 					t.Log(string(value4))
 						
 	// 				})
-	// 				*/
 	// 			}
 				
 	// 		})
@@ -71,3 +80,5 @@ func TestParseSnapshotMessage(t *testing.T) {
 	//t.Log(snapshotResponse)
 	return
 }
+
+*/

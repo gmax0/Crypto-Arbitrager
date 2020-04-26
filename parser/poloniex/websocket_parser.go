@@ -1,18 +1,39 @@
 package poloniex
 
 import (
-	"strconv"
-	"strings"
+	_"strconv"
+	_"strings"
 
 	"../../common/structs"
 	"github.com/buger/jsonparser"
 	"github.com/sirupsen/logrus"
 )
 
-func poloSplitter(c rune) bool {
-	return c == '[' || c == '"' || c == ']' || c == ','
+func ParseSnapshotMessage(msg [] byte) ([]structs.PriceLevel, []structs.PriceLevel, error) {
+	var bids []structs.PriceLevel
+	var asks []structs.PriceLevel
+
+	//Get the Channel ID
+	chanId, err := jsonparser.GetInt(msg, "[0]")
+	if err != nil {
+		logrus.Error(err)
+		return nil, nil, err
+	}
+	logrus.Info(test)
+
+	//Get the Sequence Number
+	seqNum, err := jsonparser.GetInt(msg, "[1]")
+	if err != nil {
+		logrus.Error(err)
+		return nil, nil, err
+	}
+
+	
+	//jsonparser.GetInt("person", "avatars", "[0]", "url")
+	return bids, asks, nil
 }
 
+/*
 func ParseOrderMessage(msg [] byte) ([]structs.PriceLevel, []structs.PriceLevel, error) {
 	var bids []structs.PriceLevel
 	var asks []structs.PriceLevel
@@ -80,3 +101,4 @@ func ParseOrderMessage(msg [] byte) ([]structs.PriceLevel, []structs.PriceLevel,
 
 	}, "orderBook")
 }
+*/

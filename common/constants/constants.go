@@ -6,15 +6,18 @@ const (
 
 	BidUpdate = true
 	AskUpdate = false
+
+	BTC_ETH = 1
+	BTC_USD = 2
+	ETH_USD = 3
 )
 
 //More canoniclization
-var TickerNums map[string]int  //Ticker Symbol -> int
-var TickerNames map[int]string //int -> Ticker Symbol
+var CBPricePairToInt map[string]int //Ticker Symbol -> int
 
 func init() {
-	TickerNums = make(map[string]int)
-	// TickerNums[]
-	TickerNames = make(map[int]string)
-	// TickerNames[]
+	CBPricePairToInt = make(map[string]int)
+	CBPricePairToInt["ETH-BTC"] = BTC_ETH
+	CBPricePairToInt["BTC-USD"] = BTC_USD
+	CBPricePairToInt["ETH-USD"] = ETH_USD
 }

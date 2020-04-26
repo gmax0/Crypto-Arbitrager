@@ -1,13 +1,6 @@
 package bookkeeper
 
-import (
-	"testing"
-
-	"../common/constants"
-	"../common/structs"
-	"../testhelpers"
-)
-
+/*
 func TestInitBook(t *testing.T) {
 	snapshotResp, err := testhelpers.GetMsgFromFile("../testhelpers/testdata/coinbasepro/test-l2-snapshot-response.json")
 	if err != nil {
@@ -38,3 +31,4 @@ func TestInitBook(t *testing.T) {
 	}
 	t.Log(err)
 }
+*/
