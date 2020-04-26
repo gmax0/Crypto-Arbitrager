@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"strconv"
 
-	"../../common/constants"
+	"../common/constants"
 	"github.com/buger/jsonparser"
 )
 

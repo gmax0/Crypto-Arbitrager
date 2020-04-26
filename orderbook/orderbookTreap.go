@@ -4,9 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"../../common/constants"
-	"../../common/structs"
-	coinbaseProParser "../../parser/coinbasepro"
+	"../common/structs"
 	"github.com/steveyen/gtreap" //Note that this is an immutable treap, TODO: add a size() function to this
 )
 
@@ -171,6 +169,29 @@ func (ob *OrderBookTreap) UpsertBidPriceLevel(pl structs.PriceLevel) {
 
 /*******************************************************************************/
 
+func NewOrderBookTreap(bids []structs.PriceLevel, asks []structs.PriceLevel) (*OrderBookTreap, error) {
+	bidTreap := gtreap.NewTreap(priceLevelAscendingCompare)
+	askTreap := gtreap.NewTreap(priceLevelAscendingCompare)
+
+	mBid := structs.PriceLevel{}
+	mAsk := structs.PriceLevel{}
+
+	ob := &OrderBookTreap{maxBid: mBid, minAsk: mAsk, bidSize: 0, askSize: 0,
+		bids: bidTreap, asks: askTreap}
+
+	for _, b := range bids {
+		pricelevel := structs.PriceLevel{Price: b.Price, Volume: b.Volume}
+		ob.UpsertBidPriceLevel(pricelevel)
+	}
+	for _, a := range asks {
+		pricelevel := structs.PriceLevel{Price: a.Price, Volume: a.Volume}
+		ob.UpsertAskPriceLevel(pricelevel)
+	}
+
+	return ob, nil
+}
+
+/*
 // Known issue with callback error handling: https://github.com/buger/jsonparser/issues/129
 func NewOrderBookTreap(exchange int, pricepair string, msg []byte) (*OrderBookTreap, error) {
 	var bids []structs.PriceLevel
@@ -208,3 +229,4 @@ func NewOrderBookTreap(exchange int, pricepair string, msg []byte) (*OrderBookTr
 
 	return ob, nil
 }
+*/

@@ -6,14 +6,12 @@ import (
 	"os"
 	"os/signal"
 
-	"./bookkeeper"
+	cbpBookkeeper "./bookkeeper/coinbasepro"
 
-	coinbasepro "./client/coinbasepro"
-	"./common/constants"
-	"./common/structs"
+	_ "./client/coinbasepro"
+	websocket "./client/websocket"
 	_ "./config"
 
-	"github.com/buger/jsonparser"
 	"github.com/sirupsen/logrus"
 	_ "github.com/spf13/viper"
 )
@@ -21,6 +19,7 @@ import (
 var log = logrus.New()
 
 func init() {
+	//log.SetFormatter(&log.JSONFormatter{})
 	log.SetFormatter(&logrus.TextFormatter{
 		DisableColors: true,
 		FullTimestamp: true,
@@ -37,23 +36,29 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt)
 
 	c1 := make(chan []byte, 1000)
+	c2 := make(chan []byte, 1000)
 	// c1 := make(chan []byte)
 
-	//Setup Bookkeeper
-	cBk := make(chan structs.PriceUpdate, 1000)
-	bk := bookkeeper.NewBookkeeper(cBk)
+	//Setup Bookkeepers
+	//cBk := make(chan structs.PriceUpdate, 1000)
+	cbpBk := cbpBookkeeper.NewCoinbaseproBookkeeper()
 
 	//Setup coinbasepro Client Thread
-	cbpClient, err := coinbasepro.NewClient("ws-feed.pro.coinbase.com")
+	cbpClient, err := websocket.NewClient("ws-feed.pro.coinbase.com")
+	poloClient, err := websocket.NewClient("api2.poloniex.com")
 	if err != nil {
 		log.Fatal("Unable to initialize coinbasepro Client:", err)
 		return
 	}
 	defer cbpClient.CloseUnderlyingConnection()
+	defer poloClient.CloseUnderlyingConnection()
 
+	fmt.Println("CBP")
 	fmt.Println(cbpClient)
+	fmt.Println("Polo")
+	fmt.Println(poloClient)
 
-	//Setup JSON Message
+	//Setup JSON CoinbasePro
 	jsonFile, err := ioutil.ReadFile("./testhelpers/testdata/coinbasepro/test-l2-subscribe.json")
 	if err != nil {
 		log.Fatal(err)
@@ -65,10 +70,25 @@ func main() {
 		return
 	}
 
+	//Setup JSON Poloniex
+	jsonPolo, err := ioutil.ReadFile("./testhelpers/testdata/poloniex/test-ticker-sub.json")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	jsonPolo2, err := ioutil.ReadFile("./testhelpers/testdata/poloniex/test-ticker-unsub.json")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	cbpClient.SetSubscribeMessage(jsonFile)
 	cbpClient.SetUnsubscribeMessage(jsonFile2)
+	poloClient.SetSubscribeMessage(jsonPolo)
+	poloClient.SetUnsubscribeMessage(jsonPolo2)
 
 	go cbpClient.StartStreaming(c1, interrupt)
+	//go poloClient.StartStreaming(c2, interrupt)
 
 	maxSizeReached := 0
 	msgReceived := 0
@@ -83,32 +103,17 @@ func main() {
 			log.Info("Channel size: ", chanSize)
 			log.Debug(message)
 
-			msgType, err := jsonparser.GetString(message, "type")
-			if err != nil {
-				log.Error(err)
-				return
+			cbpBk.HandleMessage(message)
+		case message := <-c2:
+			chanSize := len(c2)
+			msgReceived++
+			if chanSize > maxSizeReached {
+				maxSizeReached = chanSize
 			}
+			log.Info("POLO Channel size: ", chanSize)
+			log.Info(string(message))
+			log.Debug(message)
 
-			if msgType == "snapshot" {
-				pricePair, err := jsonparser.GetString(message, "product_id")
-				if err != nil {
-					log.Error(err)
-					return
-				}
-
-				//Initialize the orderbook for price pair on exchange
-				err = bk.InitBook(constants.CoinbasePro, pricePair, message)
-				if err != nil {
-					log.Error(err)
-				}
-			} else if msgType == "l2update" {
-				pricePair, err := jsonparser.GetString(message, "product_id")
-				if err != nil {
-					log.Error(err)
-					return
-				}
-				bk.ProcessPriceUpdate(constants.CoinbasePro, pricePair, message)
-			}
 		case <-interrupt:
 			log.Println("interrupt")
 			err = cbpClient.StopStreaming()
@@ -125,8 +130,8 @@ func main() {
 			log.Info("Messages Received: ", msgReceived)
 
 			//Test log
-			log.Info((bk.GetBooks()["ETH-USD"][constants.CoinbasePro]).GetMaxBidPriceLevel())
-			log.Info((bk.GetBooks()["ETH-USD"][constants.CoinbasePro]).GetMinAskPriceLevel())
+			log.Info((cbpBk.B.GetBooks(3).GetMaxBidPriceLevel()))
+			log.Info((cbpBk.B.GetBooks(3).GetMinAskPriceLevel()))
 
 			return
 		}

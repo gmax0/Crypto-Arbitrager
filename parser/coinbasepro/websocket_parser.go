@@ -143,10 +143,10 @@ func ParseUpdateMessage(msg []byte) ([]structs.PriceLevel, []structs.PriceLevel,
 
 		//Example value passed to callback: ["buy", "100", "1"]
 		rawUpdate := string(value)
-		logrus.Debug(rawUpdate)
+		//logrus.Debug(rawUpdate)
 
 		parsedUpdate := strings.FieldsFunc(rawUpdate, coinbaseSplitter)
-		logrus.Info(parsedUpdate)
+		//logrus.Info(parsedUpdate)
 
 		price, innerErr := strconv.ParseFloat(parsedUpdate[1], 64)
 		if innerErr != nil {
@@ -159,18 +159,18 @@ func ParseUpdateMessage(msg []byte) ([]structs.PriceLevel, []structs.PriceLevel,
 			return
 		}
 
-		logrus.Info(parsedUpdate[1])
-		logrus.Info(parsedUpdate[2])
+		//logrus.Info(parsedUpdate[1])
+		//logrus.Info(parsedUpdate[2])
 
 		if parsedUpdate[0] == "buy" {
-			logrus.Info("BUY!")
+			//logrus.Info("BUY!")
 			bu := structs.PriceLevel{Price: price, Volume: volume}
 			bidUpdates = append(bidUpdates, bu)
 			return
 		}
 
 		if parsedUpdate[0] == "sell" {
-			logrus.Info("SELL!")
+			//logrus.Info("SELL!")
 			au := structs.PriceLevel{Price: price, Volume: volume}
 			askUpdates = append(askUpdates, au)
 			return
